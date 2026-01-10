@@ -1,0 +1,23 @@
+# Rust project language detection
+*.rs linguist-language=Rust
+*.toml linguist-language=TOML
+
+# Python OCR bridge
+*.py linguist-language=Python
+
+# Exclude test files and outputs from statistics
+test/** linguist-generated=true
+__pycache__/** linguist-generated=true
+
+# Exclude documentation from statistics
+docs/** linguist-documentation=true
+*.md linguist-documentation=true
+
+# Exclude Docker and config files from statistics
+Dockerfile linguist-language=Dockerfile
+docker-compose.yml linguist-language=YAML
+*.sh linguist-language=Shell
+*.fish linguist-language=Shell
+
+# Mark generated/vendored code
+target/** linguist-generated=true
