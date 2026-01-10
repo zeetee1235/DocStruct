@@ -1,198 +1,99 @@
-# pdfocr
+# DocStruct
 
-PDF to text extraction CLI tool using OCR.
+Parser ↔ OCR 크로스체킹 기반 문서 구조 복원 시스템 (MVP).
 
-## Quick Start
+## 목표
+
+- 입력: PDF
+- 출력: `DocumentFinal` (페이지별 블록 + 텍스트/표/수식/그림 + confidence + provenance)
+- provenance: `parser | ocr | fused`
+- confidence: 0~1
+- 좌표계: page pixel 좌표 (렌더 DPI 기준)
+
+## 아키텍처
+
+- Parser Track과 OCR Track이 각각 독립적으로 Layout Hypothesis를 생성
+- Fusion Engine이 정렬/비교/충돌 해결/신뢰도 스코어링으로 최종 구조 생성
+
+## 폴더 구조
+
+```
+core/
+  geometry/        # BBox, IoU, 좌표 변환
+  model/           # Document/Page/Block/Line/Span
+  confidence/      # scoring
+parser/
+  pdf_reader/
+  text_extractor/  # glyph/run + bbox
+  layout_builder/  # run → line → block (hypothesis A)
+ocr/
+  renderer/        # page → image
+  bridge/          # python 호출/IPC
+  layout_builder/  # OCR tokens → block (hypothesis B)
+fusion/
+  align/
+  compare/
+  resolve/
+  finalize/
+export/
+  json_export/
+  html_debug_export/
+```
+
+## 실행 방법 (MVP)
 
 ```bash
-# Build Docker image
-docker build -t pdfocr .
-
-# Process PDF
-docker compose run --rm pdfocr /work/path/to/document.pdf
+cargo run -- <input.pdf> --out <dir> --dpi 200
 ```
 
-Output: `document.txt` in same directory.
+산출물:
 
-## Documentation
+- `<dir>/document.json`
+- `<dir>/debug/page_001.html` + 페이지 이미지 + 오버레이
 
-- [docs/SIMPLE_USAGE.md](docs/SIMPLE_USAGE.md) - Simplest usage guide
-- [docs/DOCKER_QUICKSTART.md](docs/DOCKER_QUICKSTART.md) - Docker quick reference
-- [docs/DOCKER_USAGE.md](docs/DOCKER_USAGE.md) - Detailed Docker usage
-- [docs/QUICKSTART.md](docs/QUICKSTART.md) | [한국어](docs/QUICKSTART.ko.md) - Quick start guide
-- [docs/DOCKER.md](docs/DOCKER.md) | [한국어](docs/DOCKER.ko.md) - Docker deployment
-- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | [한국어](docs/ARCHITECTURE.ko.md) - Architecture overview
-- [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) | [한국어](docs/DEVELOPMENT.ko.md) - Development guide
+## Document JSON 스키마 예시
 
-## Pipeline
-
-1. PDF to Image: Convert pages to PNG (pdf2image)
-2. OCR: Extract text (Tesseract OCR)
-3. Output: Save as UTF-8 text file
-
-## Local Installation
-
-### Setup
-
-```bash
-chmod +x setup.sh
-./setup.sh
+```json
+{
+  "pages": [
+    {
+      "page_idx": 0,
+      "class": "digital",
+      "width": 1000,
+      "height": 1400,
+      "blocks": [
+        {
+          "type": "TextBlock",
+          "bbox": { "x0": 10.0, "y0": 20.0, "x1": 400.0, "y1": 80.0 },
+          "lines": [
+            {
+              "spans": [
+                {
+                  "text": "Hello world",
+                  "bbox": { "x0": 10.0, "y0": 20.0, "x1": 200.0, "y1": 40.0 },
+                  "source": "parser",
+                  "style": null
+                }
+              ]
+            }
+          ],
+          "confidence": 0.85,
+          "source": "fused"
+        }
+      ]
+    }
+  ]
+}
 ```
 
-Installs dependencies, creates virtual environment, installs packages.
+## Python OCR 브리지
 
-### Install CLI (Optional)
+- 스크립트: `ocr/bridge/ocr_bridge.py`
+- 입력: 이미지 경로
+- 출력: `[{"text": "...", "bbox": [x0,y0,x1,y1]}]` JSON
+- OCR 엔진은 플러그 가능하도록 설계 (tesseract/paddleocr/easyocr 등 교체 가능)
 
-```bash
-./install.sh
-```
+## 디버그 뷰어
 
-Options: system-wide, user-local, or development mode.
-
-## Docker Usage
-
-### Basic
-
-```bash
-# Build
-docker build -t pdfocr .
-
-# Run
-docker compose run --rm pdfocr /work/document.pdf
-```
-
-### With Options
-
-```bash
-# Custom output directory
-docker compose run --rm pdfocr /work/document.pdf -o /work/output
-
-# Multiple files
-docker compose run --rm pdfocr /work/pdfs/*.pdf --merge
-
-# Custom language (default: eng+kor)
-docker compose run --rm pdfocr /work/document.pdf --lang kor
-
-# Keep images for debugging
-docker compose run --rm pdfocr /work/document.pdf --keep-images
-```
-
-## CLI Usage
-
-After installation:
-
-```bash
-# Simple
-pdfocr document.pdf
-
-# Multiple files
-pdfocr *.pdf --merge
-
-# Custom output
-pdfocr document.pdf -o ./output
-```
-
-# Keep images for debugging
-docker compose run --rm pdfocr /work/document.pdf --keep-images -i /work/images
-
-# All options
-docker compose run --rm pdfocr \
-  /work/test/test_document.pdf \
-  -o /work/test/output \
-  --keep-images -i /work/images \
-  --lang eng+kor --dpi 300
-```
-
-**Key Points**:
-- 📁 Output saves to **same directory** as PDF by default
-- 📄 Creates `filename.txt` from `filename.pdf`
-- 🗂️ Use `/work/...` paths inside container
-- 💾 All files persist on your host filesystem
-
-See [Docker Documentation](docs/DOCKER.md) ([한국어](docs/DOCKER.ko.md)) for detailed usage.
-
-### 4. Usage
-
-#### Docker (simplest, no installation):
-
-```bash
-# Just specify the PDF - output auto-saves to same directory
-docker compose run --rm pdfocr /work/path/to/document.pdf
-
-# With options
-docker compose run --rm pdfocr /work/document.pdf -o /work/output --lang eng+kor
-```
-
-#### After CLI installation:
-
-```bash
-# Simple - creates document.txt in same directory
-pdfocr ~/Documents/lecture.pdf
-
-# Multiple files
-pdfocr /path/to/*.pdf --merge
-
-# Custom output directory
-pdfocr document.pdf -o ./output
-```
-
-## Project Structure
-
-```
-pdfocr/
-├── src/pdfocr/          # Main package
-│   ├── main.py          # Pipeline entry point
-│   ├── pdf_to_image.py  # PDF converter
-│   ├── image_to_text.py # OCR module
-│   ├── layout.py        # Layout analysis
-│   ├── block_ocr.py     # Block-based OCR
-│   └── types.py         # Type definitions
-├── docs/                # Documentation
-│   ├── SIMPLE_USAGE.md
-│   ├── DOCKER_QUICKSTART.md
-│   ├── DOCKER_USAGE.md
-│   ├── QUICKSTART.md / QUICKSTART.ko.md
-│   ├── DOCKER.md / DOCKER.ko.md
-│   ├── ARCHITECTURE.md / ARCHITECTURE.ko.md
-│   └── DEVELOPMENT.md / DEVELOPMENT.ko.md
-├── test/                # Test files and scripts
-├── pdfocr               # CLI executable
-├── main.py              # CLI entry point
-├── requirements.txt     # Python dependencies
-├── setup.sh             # Environment setup
-├── install.sh           # CLI installation
-├── Dockerfile           # Docker image definition
-└── docker-compose.yml   # Docker compose config
-```
-
-## Requirements
-
-System: poppler-utils, tesseract-ocr
-Python: pdf2image, pytesseract, Pillow, opencv-python
-
-## CLI Options
-
-```
-pdfocr [OPTIONS] <PDF_FILES...>
-
-Options:
-  -o, --output-dir DIR  Output directory (default: same as PDF)
-  -i, --image-dir DIR   Temporary image directory
-  -l, --lang LANG       OCR language (default: eng+kor)
-  -d, --dpi DPI         Image resolution (default: 300)
-  --keep-images         Keep temporary images
-  --merge              Merge all outputs into one file
-```
-
-## Examples
-
-```bash
-# Basic
-pdfocr document.pdf
-
-# Multiple files
-pdfocr *.pdf --merge
-
-# Custom options
-pdfocr document.pdf -o ./output --dpi 600 --keep-images
-```
+- HTML 페이지에서 parser/ocr/fused 블록을 각각 색상 레이어로 표시
+- 블록 클릭 시 parser_text / ocr_text / final_text / confidence / similarity 노출
