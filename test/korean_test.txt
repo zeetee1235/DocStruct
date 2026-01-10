@@ -1,0 +1,66 @@
+================================================================================
+Page 1: korean_test_page_001.png
+================================================================================
+
+OCR Test - English and Korean
+
+PDF OCR Test
+January 7, 2026
+
+1 Introduction
+
+This is a test document for OCR with multilingual support.
+이것은 00 테스트 문 서 입 니다. 영 어 와 한 글 을 동시에 처 리 할 수 있는지 확 인 합 니
+다.
+
+2 Lists
+
+2.1 English Items
+
+First item in English
+
+Second item: numbers 123, 456
+
+Third item: symbols test
+
+2.2 Korean Items
+@ 첫 번째 한글 항목
+e 두 번째 항목: 가 나 다 라
+
+세 번째 항목: 안녕하세요
+
+ald)
+
+ald)
+
+3 Mathematics
+
+Quadratic formula:
+
+—b+ Vb? — 4ac
+22822 (1)
+2a
+Einstein equation:
+E=mc (2)
+
+
+
+================================================================================
+Page 2: korean_test_page_002.png
+================================================================================
+
+4 Mixed Text
+
+대 한 민 국 의 수 도 는 서 울 입니다. 116 080181 of Korea is Seoul. Jet 7] =o] HA SAA 인
+공 지 능이 중 요 해 졌 습니다.
+Artificial intelligence has become important.
+
+5 Conclusion
+이 문 서 는 00 시 스 템 이 영 어 와 한 글 을 동시에 처 리 할 수 있는지 확 인 하 기 위한 테스트
+
+입니다
+H ㆍ
+This document tests whether the OCR system can process both English and Korean.
+
+
+

@@ -1,0 +1,161 @@
+================================================================================
+Page 1: test_document_page_001.png
+================================================================================
+
+OCR Stress Test Document
+
+Mixed content for PDF — Image — Text validation
+
+pdfocr Project
+January 8, 2026
+
+Abstract
+
+This document intentionally mixes plain text, mathematical notation, tables, lists,
+vector drawings, and hyperlinks. It is meant to probe how well the OCR pipeline
+handles varied layouts, line breaks, and semantic structure.
+
+OCR Ls
+
+1 Overview
+
+The following sections combine narrative text with display math and inline symbols such as
+E=mc?,V- E= p/éo, and probability notation P(X < x). Paragraphs use hyphenation
+and line wraps to stress layout-aware OCR. Repeated words with subtle differences (e.g.,
+
+kernel vs. kernels) are present to spot hallucinations.
+
+2 Display Mathematics
+
+We include a few multi-line expressions to check alignment:
+
+f(x) = I ee’ dt= JT, (1)
+
+Ax = Xx, (2)
+그 1 1
+= 3
+
+A short derivation with text interleaved:
+
+d...
+ai (e'"") =e". (Sint + tcost). (4)
+
+
+
+================================================================================
+Page 2: test_document_page_002.png
+================================================================================
+
+PDF OCR Stress Test 2
+
+3 Table and Lists
+
+The table mixes numbers, symbols, and words to see how column boundaries are recovered.
+
+ 
+
+Feature Value Uncertainty Note
+Temperature (°C) 21.4 +0.3 baseline
+Pressure (kPa) 101.2 +0.5 nominal
+Accuracy (%) 98.7 +0.1 high-confidence
+Latency (ms) 42 +5 measured on edge
+
+Table 1: Structured data with mixed units.
+
+Nested lists follow:
+
+Top-level bullet with a hyperlink: https://example.com/data
+
+e Another bullet with emphasized text and a footnote} |
+
+@ : OCR .
+
+Enumerated sub-tasks:
+
+1. Capture inline math such as a, 6,7.
+
+2.: E=me? -
+
+3. :
+
+4. Handle words split across lines (hyphen- ation).
+
+5. Keep indentation hints intact.
+
+4 Vector Figure
+
+The figure below is drawn with TikZ to avoid external images while still giving curves, labels,
+and color.
+
+ 
+
+‘Footnotes are included to see if ordering is preserved.
+
+
+
+================================================================================
+Page 3: test_document_page_003.png
+================================================================================
+
+PDF OCR Stress Test 3
+
+ 
+
+eak
+2 /2 oscillation
+
+ 
+
+origin
+
+Figure 1: Sine-like curve with annotations and grid.
+
+5 Paragraph Stress Test
+
+Continuous prose with mixed punctuation: “Edge-aware OCR systems must balance recall
+and precision; however, noise—especially from compressed scans—can create artifacts.” The
+quick brown fox jumps over the lazy dog. A second paragraph repeats with minor edits to
+detect hallucination: the quick brown fox jumps over the lazy dog, but this time the fox
+pauses at line breaks to test robustness.
+
+6 Code Fragment
+
+Verbatim text can challenge OCR because of monospaced glyphs:
+
+for (int i= 0; i < 5; ++i) {
+double w = exp(-0.5 * pow(i - 2.0, 2));
+printf("w[%d] = %.3f\n", i, w);
+
+OCR
+
+7.1
+., PDF OCR . (English and Korean) OCR
+
+7.2
+
+, 5. (AI) (Machine Learning). : A=ar?.
+
+
+
+================================================================================
+Page 4: test_document_page_004.png
+================================================================================
+
+PDF OCR Stress Test 4
+
+ 
+
+7.3
+e : Python, Java, C++
+e Second item: English mixed text
+
+e: 123, $456, @%
+
+8 Conclusion
+
+This concludes the synthetic PDF. Inspect the extracted text for dropped symbols, merged
+lines, and mis-ordered sections. Compare the OCR output with the known ground truth
+here to quantify accuracy.
+
+
+

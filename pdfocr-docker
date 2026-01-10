@@ -1,0 +1,27 @@
+#!/usr/bin/env fish
+# Simple alias wrapper for pdfocr Docker
+
+# Add this to your ~/.config/fish/config.fish:
+#   alias pdfocr="$HOME/pdfocr/pdfocr-docker"
+# Or system-wide at /usr/local/bin/pdfocr-docker
+
+set -l script_dir (dirname (status -f))
+cd $script_dir
+
+# Convert relative/absolute paths to /work/... paths
+set -l args
+for arg in $argv
+    # Check if it looks like a file path (ends with .pdf or is a directory)
+    if string match -q "*.pdf" $arg; or test -e $arg
+        # Convert to absolute path, then to /work/... path
+        set -l abs_path (realpath $arg 2>/dev/null; or echo $arg)
+        set -l rel_path (string replace $PWD "" $abs_path)
+        set -a args "/work$rel_path"
+    else
+        # Keep flags and other arguments as-is
+        set -a args $arg
+    end
+end
+
+# Run docker compose with converted paths
+docker compose run --rm pdfocr $args

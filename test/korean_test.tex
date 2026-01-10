@@ -1,0 +1,69 @@
+\documentclass[12pt]{article}
+\usepackage{CJKutf8}
+\usepackage{geometry}
+\usepackage{amsmath}
+\geometry{margin=1in}
+
+\title{OCR Test - English and Korean}
+\author{PDF OCR Test}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section{Introduction}
+
+This is a test document for OCR with multilingual support.
+
+\begin{CJK}{UTF8}{mj}
+이것은 OCR 테스트 문서입니다. 영어와 한글을 동시에 처리할 수 있는지 확인합니다.
+\end{CJK}
+
+\section{Lists}
+
+\subsection{English Items}
+\begin{itemize}
+\item First item in English
+\item Second item: numbers 123, 456
+\item Third item: symbols test
+\end{itemize}
+
+\subsection{Korean Items}
+
+\begin{CJK}{UTF8}{mj}
+\begin{itemize}
+\item 첫 번째 한글 항목
+\item 두 번째 항목: 가나다라
+\item 세 번째 항목: 안녕하세요
+\end{itemize}
+\end{CJK}
+
+\section{Mathematics}
+
+Quadratic formula:
+\begin{equation}
+x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}
+\end{equation}
+
+Einstein equation:
+\begin{equation}
+E = mc^2
+\end{equation}
+
+\section{Mixed Text}
+
+\begin{CJK}{UTF8}{mj}
+대한민국의 수도는 서울입니다. The capital of Korea is Seoul. 과학기술이 발전하면서 인공지능이 중요해졌습니다.
+\end{CJK}
+
+Artificial intelligence has become important.
+
+\section{Conclusion}
+
+\begin{CJK}{UTF8}{mj}
+이 문서는 OCR 시스템이 영어와 한글을 동시에 처리할 수 있는지 확인하기 위한 테스트입니다.
+\end{CJK}
+
+This document tests whether the OCR system can process both English and Korean.
+
+\end{document}
