@@ -101,7 +101,7 @@ fn resolve_pair(pair: &MatchedPair) -> Block {
                 debug: Some(BlockDebug {
                     parser_text: a_text.clone(),
                     ocr_text: b_text.clone(),
-                    final_text: Some(final_text),
+                    final_text,
                     similarity,
                 }),
             }

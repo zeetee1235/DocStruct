@@ -4,7 +4,7 @@ pub fn score_confidence(
     similarity: Option<f32>,
     geometry_good: bool,
 ) -> f32 {
-    let mut score = 0.0;
+    let mut score: f32 = 0.0;
     if has_parser {
         score += 0.4;
     }

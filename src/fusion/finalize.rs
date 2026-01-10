@@ -1,5 +1,5 @@
 use crate::core::model::{PageClass, PageHypothesis};
-use crate::core::page_classifier::{classify_page, PageSignals};
+use crate::core::page_classifier::{classify_page as classify_page_internal, PageSignals};
 
 pub fn classify_page(parser: &PageHypothesis, ocr: &PageHypothesis) -> PageClass {
     let parser_glyphs = parser
@@ -19,5 +19,5 @@ pub fn classify_page(parser: &PageHypothesis, ocr: &PageHypothesis) -> PageClass
         image_coverage: if ocr_glyphs > 0 { 0.6 } else { 0.1 },
         ocr_text_density: (ocr_glyphs as f32 / 1000.0).min(1.0),
     };
-    classify_page(signals)
+    classify_page_internal(signals)
 }

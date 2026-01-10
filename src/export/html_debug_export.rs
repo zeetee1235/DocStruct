@@ -109,7 +109,7 @@ body {{ margin: 0; font-family: Arial, sans-serif; }}
 const info = document.getElementById('info');
 for (const el of document.querySelectorAll('.bbox')) {{
   el.addEventListener('click', () => {{
-    info.innerHTML = `provenance: ${el.dataset.provenance}<br/>confidence: ${el.dataset.confidence}<br/>similarity: ${el.dataset.similarity}<br/>parser_text: ${el.dataset.parserText}<br/>ocr_text: ${el.dataset.ocrText}<br/>final_text: ${el.dataset.finalText}`;
+    info.innerHTML = `provenance: ${{el.dataset.provenance}}<br/>confidence: ${{el.dataset.confidence}}<br/>similarity: ${{el.dataset.similarity}}<br/>parser_text: ${{el.dataset.parserText}}<br/>ocr_text: ${{el.dataset.ocrText}}<br/>final_text: ${{el.dataset.finalText}}`;
   }});
 }}
 </script>
