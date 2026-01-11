@@ -2,6 +2,8 @@ pub mod layout_builder;
 pub mod pdf_reader;
 pub mod text_extractor;
 
+pub use pdf_reader::PdfReader;
+
 use anyhow::Result;
 use std::path::Path;
 

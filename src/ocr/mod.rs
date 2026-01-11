@@ -2,6 +2,8 @@ pub mod bridge;
 pub mod layout_builder;
 pub mod renderer;
 
+pub use renderer::PageRenderer;
+
 use anyhow::Result;
 use std::path::Path;
 
