@@ -5,6 +5,9 @@ use anyhow::Result;
 
 use crate::core::model::DocumentFinal;
 
+pub use html_debug_export::HtmlDebugExporter;
+pub use json_export::JsonExporter;
+
 pub trait Exporter {
     fn export(&self, document: &DocumentFinal) -> Result<()>;
 }
