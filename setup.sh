@@ -121,7 +121,7 @@ fi
 echo ""
 
 # 2. Python 가상환경 생성
-echo "【2단계】 Python 가상환경 설정"
+echo "【2단계】 Python 가상환경 설정 (uv 사용)"
 echo "------------------------------------------"
 
 if [ -d "venv" ]; then
@@ -137,8 +137,13 @@ if [ -d "venv" ]; then
 fi
 
 if [ ! -d "venv" ]; then
-    echo "Python 가상환경 생성 중..."
-    python3 -m venv venv
+    echo "Python 가상환경 생성 중 (uv venv)..."
+    if command -v uv &> /dev/null; then
+        uv venv venv
+    else
+        echo -e "${YELLOW}⚠ uv 명령을 찾을 수 없습니다. 기본 venv로 생성합니다.${NC}"
+        python3 -m venv venv
+    fi
     echo -e "${GREEN}✓ 가상환경 생성 완료${NC}"
 fi
 
@@ -151,19 +156,25 @@ echo "  Python 버전: $(python --version)"
 echo ""
 
 # 3. Python 패키지 설치
-echo "【3단계】 Python 패키지 설치"
+echo "【3단계】 Python 패키지 설치 (uv 사용)"
 echo "------------------------------------------"
 
 if [ -f "requirements.txt" ]; then
-    echo "pip, setuptools, wheel 업그레이드 중..."
-    pip install --upgrade pip setuptools wheel
-    echo ""
-    echo "requirements.txt에서 패키지 설치 중..."
-    pip install -r requirements.txt
+    if command -v uv &> /dev/null; then
+        echo "uv를 사용해 requirements.txt에서 패키지 설치 중..."
+        uv pip install -r requirements.txt
+    else
+        echo -e "${YELLOW}⚠ uv 명령을 찾을 수 없습니다. pip로 설치합니다.${NC}"
+        echo "pip, setuptools, wheel 업그레이드 중..."
+        pip install --upgrade pip setuptools wheel
+        echo ""
+        echo "requirements.txt에서 패키지 설치 중..."
+        pip install -r requirements.txt
+    fi
     echo -e "${GREEN}✓ Python 패키지 설치 완료${NC}"
     echo ""
     echo "설치된 패키지:"
-    pip list | grep -E "pdf2image|pytesseract|Pillow"
+    python -m pip list | grep -E "pdf2image|pytesseract|Pillow" || true
 else
     echo -e "${RED}✗ requirements.txt 파일을 찾을 수 없습니다${NC}"
 fi

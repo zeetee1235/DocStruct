@@ -85,7 +85,7 @@
 ### 기술 스택
 - **주 언어**: Rust (시스템 코어)
 - **보조 언어**: Python (OCR 브리지)
-- **빌드 시스템**: Cargo (Rust), pip (Python)
+- **빌드 시스템**: Cargo (Rust), uv (Python)
 - **주요 라이브러리**:
   - Rust: `clap`, `serde`, `serde_json`, `image`, `strsim`, `thiserror`, `anyhow`
   - Python: `pytesseract`, `pdf2image`, `opencv-python`, `Pillow`
