@@ -86,6 +86,19 @@
 - **주 언어**: Rust (시스템 코어)
 - **보조 언어**: Python (OCR 브리지)
 - **빌드 시스템**: Cargo (Rust), uv (Python)
+
+### 외부 CLI 의존성 (런타임)
+
+Rust/Python 코드가 호출하는 OS 레벨 도구들:
+
+- `pdfinfo` (poppler-utils)
+    - PdfReader가 페이지 수를 얻을 때 사용
+- `pdftotext` (poppler-utils)
+    - TextExtractor가 페이지 단위 텍스트를 추출할 때 사용
+- `pdftoppm` (poppler-utils)
+    - PageRenderer가 PDF 페이지를 PNG 이미지로 렌더링할 때 사용
+- `tesseract`
+    - Python `pytesseract`가 이미지에서 텍스트/바운딩박스를 추출할 때 사용
 - **주요 라이브러리**:
   - Rust: `clap`, `serde`, `serde_json`, `image`, `strsim`, `thiserror`, `anyhow`
   - Python: `pytesseract`, `pdf2image`, `opencv-python`, `Pillow`
@@ -125,17 +138,21 @@ pub fn build_document(config: &PipelineConfig) -> Result<DocumentFinal>
 
 #### 2.1 PdfReader (`pdf_reader.rs`)
 ```rust
-pub fn page_count(&self) -> usize
+pub fn page_count(&self) -> Result<usize>
 ```
-- PDF 파일을 열고 페이지 수를 반환
-- *현재는 stub 구현으로 항상 1 반환 (추후 실제 PDF 라이브러리 통합 필요)*
+- Poppler의 `pdfinfo` CLI를 호출해 페이지 수를 파싱
+- `Pages:` 라인을 찾아 `usize`로 변환 후 반환
+- `pdfinfo` 실행 실패 / `Pages:` 라인 없음 등은 `anyhow::Error`로 전파
 
 #### 2.2 TextExtractor (`text_extractor.rs`)
 ```rust
 pub fn extract_glyph_runs(pdf_path: &Path, page_idx: usize) -> Vec<GlyphRun>
 ```
-- PDF에서 glyph(문자 단위) 데이터와 bounding box 추출
-- *현재는 stub으로 더미 데이터 반환*
+- Poppler의 `pdftotext` CLI로 **단일 페이지 텍스트** 추출 (`-f`, `-l` 사용)
+- 표준 출력으로 나온 텍스트를 하나의 `GlyphRun`으로 감싸서 반환
+    - `GlyphRun.text`: 해당 페이지 전체 텍스트
+    - `GlyphRun.bbox`: 현재는 페이지 전체를 나타내는 고정 박스 (`0,0,1000,1400`)
+- CLI 호출 실패 / 텍스트 없음 등은 빈 벡터 반환 (Parser Track이 "빈 페이지"로 해석)
 
 #### 2.3 ParserLayoutBuilder (`layout_builder.rs`)
 ```rust
@@ -143,10 +160,10 @@ impl ParserTrack for ParserLayoutBuilder {
     fn analyze_page(&self, pdf_path: &Path, page_idx: usize) -> Result<PageHypothesis>
 }
 ```
-- Glyph run을 Line으로 그룹핑
-- Line을 Block으로 그룹핑
-- `Provenance::Parser` 태그와 함께 `PageHypothesis` 생성
-- 현재는 모든 glyph를 하나의 TextBlock으로 병합
+- `extract_glyph_runs` 결과를 받아 단일 `Line` + 단일 `TextBlock`으로 구성
+- 여러 `GlyphRun`이 존재할 경우, bbox를 union 해서 블록 bbox를 계산
+- 모든 Span의 `source`는 `Provenance::Parser`
+- 현재는 **페이지당 하나의 TextBlock**을 만드는 간단한 레이아웃 빌더
 
 ---
 
@@ -158,9 +175,11 @@ impl ParserTrack for ParserLayoutBuilder {
 ```rust
 pub fn render_page(&self, pdf_path: &Path, page_idx: usize) -> Result<RenderedPage>
 ```
-- PDF 페이지를 PNG 이미지로 변환
-- DPI 설정에 따라 해상도 조정
-- *현재는 빈 흰색 이미지 생성 (추후 실제 렌더링 엔진 통합 필요)*
+- Poppler의 `pdftoppm` CLI를 호출해 **단일 페이지를 PNG 이미지로 렌더링**
+    - `-png -r <dpi> -f <page> -l <page> <pdf> <prefix>` 형태로 실행
+    - 1‑based 페이지 번호를 사용 (`page_idx + 1`)
+- 출력 경로 예시: `debug/page_001-1.png`
+- 실패 시 상태 코드와 함께 에러 반환
 
 #### 3.2 OcrBridge (`bridge.rs`)
 ```rust
@@ -171,8 +190,10 @@ pub fn run(&self, image_path: &Path) -> Result<Vec<OcrToken>>
 - 각 토큰은 `text`와 `bbox` 정보 포함
 
 **Python 브리지 스크립트** (`ocr/bridge/ocr_bridge.py`):
-- 현재는 빈 배열 반환 (placeholder)
-- 추후 tesseract/paddleocr/easyocr 등 실제 OCR 엔진 통합 예정
+- `pytesseract.image_to_data`를 사용해 토큰 단위 OCR 수행
+    - 각 토큰에 대해 `text`, `left/top/width/height`를 받아
+        `{"text": str, "bbox": [x0, y0, x1, y1]}` 형태로 출력
+- stdout으로 JSON 리스트를 출력하고, Rust의 `OcrBridge`가 이를 파싱
 
 #### 3.3 OcrLayoutBuilder (`layout_builder.rs`)
 ```rust

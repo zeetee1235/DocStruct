@@ -25,7 +25,7 @@ impl PipelineConfig {
 
 pub fn build_document(config: &PipelineConfig) -> Result<DocumentFinal> {
     let pdf_reader = PdfReader::new(config.input.clone())?;
-    let page_count = pdf_reader.page_count();
+    let page_count = pdf_reader.page_count()?;
 
     let renderer = PageRenderer::new(config.output.join("debug"), config.dpi);
     let parser_track = ParserLayoutBuilder::new();

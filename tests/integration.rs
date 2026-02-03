@@ -112,7 +112,7 @@ fn test_parser_pipeline_with_test_document() -> Result<()> {
     }
 
     let pdf_reader = PdfReader::new(test_pdf.clone())?;
-    let page_count = pdf_reader.page_count();
+    let page_count = pdf_reader.page_count()?;
     
     // Should have at least 1 page
     assert!(page_count > 0, "test_document.pdf should have at least one page");
@@ -160,7 +160,7 @@ fn test_full_pipeline_with_test_document() -> Result<()> {
     fs::create_dir_all(&out)?;
 
     let pdf_reader = PdfReader::new(test_pdf.clone())?;
-    let page_count = pdf_reader.page_count();
+    let _page_count = pdf_reader.page_count()?;
 
     let renderer = PageRenderer::new(out.join("debug"), 200);
     let parser_track = ParserLayoutBuilder::new();
@@ -217,7 +217,7 @@ fn test_korean_pdf_opens() -> Result<()> {
     }
 
     let pdf_reader = PdfReader::new(korean_pdf.clone())?;
-    let page_count = pdf_reader.page_count();
+    let page_count = pdf_reader.page_count()?;
     
     assert!(page_count > 0, "korean_test.pdf should have at least one page");
 
