@@ -1,57 +1,89 @@
 # DocStruct
 
-Parser ↔ OCR 크로스체킹 기반 문서 구조 복원 시스템 (MVP).
+PDF document structure recovery system using parser-OCR cross-validation.
 
-## 목표
+## Overview
 
-- 입력: PDF
-- 출력: `DocumentFinal` (페이지별 블록 + 텍스트/표/수식/그림 + confidence + provenance)
-- provenance: `parser | ocr | fused`
-- confidence: 0~1
-- 좌표계: page pixel 좌표 (렌더 DPI 기준)
+DocStruct extracts structured content from PDF documents by combining two independent analysis paths: a parser track that analyzes embedded text and fonts, and an OCR track that processes rendered page images. The fusion engine merges both hypotheses, resolving conflicts and assigning confidence scores.
 
-## 아키텍처
+## Features
 
-- Parser Track과 OCR Track이 각각 독립적으로 Layout Hypothesis를 생성
-- Fusion Engine이 정렬/비교/충돌 해결/신뢰도 스코어링으로 최종 구조 생성
+- **Block Type Classification**: Automatically detects and classifies text, tables, figures, and math equations
+- **Dual-Track Analysis**: Parser-based and OCR-based layout hypotheses
+- **Confidence Scoring**: Each element tagged with provenance (parser/ocr/fused) and confidence (0-1)
+- **Multiple Export Formats**:
+  - JSON: Structured data with full metadata
+  - Markdown: Text with embedded images for tables/figures
+  - TXT: Plain text with block type annotations
+  - HTML: Interactive debug viewer
+- **LaTeX OCR**: Extracts mathematical equations as LaTeX using pix2tex
 
-## 폴더 구조
+## Installation
 
-```
-core/
-  geometry/        # BBox, IoU, 좌표 변환
-  model/           # Document/Page/Block/Line/Span
-  confidence/      # scoring
-parser/
-  pdf_reader/
-  text_extractor/  # glyph/run + bbox
-  layout_builder/  # run → line → block (hypothesis A)
-ocr/
-  renderer/        # page → image
-  bridge/          # python 호출/IPC
-  layout_builder/  # OCR tokens → block (hypothesis B)
-fusion/
-  align/
-  compare/
-  resolve/
-  finalize/
-export/
-  json_export/
-  html_debug_export/
-```
+### Requirements
 
-## 실행 방법 (MVP)
+- Rust 1.93.0+
+- Python 3.12+
+- poppler-utils (pdfinfo, pdftotext, pdftoppm)
+- tesseract 5.3+
+
+### Setup
 
 ```bash
-cargo run -- <input.pdf> --out <dir> --dpi 200
+# Install system dependencies (Ubuntu/Debian)
+sudo apt install poppler-utils tesseract-ocr
+
+# Install Python dependencies
+pip install -r requirements.txt
+
+# Build
+cargo build --release
 ```
 
-산출물:
+## Usage
 
-- `<dir>/document.json`
-- `<dir>/debug/page_001.html` + 페이지 이미지 + 오버레이
+```bash
+./target/release/docstruct <input.pdf> --out <output_dir> --dpi 200
+```
 
-## Document JSON 스키마 예시
+### Output Files
+
+```
+output_dir/
+├── document.json         # Structured data (all blocks, lines, spans)
+├── document.md          # Markdown with embedded images
+├── document.txt         # Plain text with block markers
+├── page_001.md          # Per-page markdown
+├── figures/
+│   └── page_NNN_TYPE__NN.png  # Extracted images
+└── debug/
+    ├── page_001.html    # Interactive debug viewer
+    └── page_001.png     # Rendered page image
+```
+
+## Architecture
+
+### Pipeline
+
+1. **Parser Track**: Extract text positions from PDF internal structure
+2. **OCR Track**: Render pages to images, detect blocks, classify types, run OCR
+3. **Fusion**: Align blocks, compare content, resolve conflicts, assign confidence
+4. **Export**: Generate JSON, Markdown, TXT, and HTML outputs
+
+### Block Classification
+
+The OCR bridge classifies blocks based on visual features:
+
+- **Math**: Pattern matching (∫∑∏∂∇, Greek letters, function names) + symbol density
+- **Figure**: High edge density (>0.08) for graphics and diagrams
+- **Table**: Grid structure detection (horizontal/vertical line density)
+- **Text**: Default classification
+
+### Coordinate System
+
+All coordinates are in page pixel space based on the rendering DPI (default 200).
+
+## Document Schema
 
 ```json
 {
@@ -64,21 +96,17 @@ cargo run -- <input.pdf> --out <dir> --dpi 200
       "blocks": [
         {
           "type": "TextBlock",
-          "bbox": { "x0": 10.0, "y0": 20.0, "x1": 400.0, "y1": 80.0 },
-          "lines": [
-            {
-              "spans": [
-                {
-                  "text": "Hello world",
-                  "bbox": { "x0": 10.0, "y0": 20.0, "x1": 200.0, "y1": 40.0 },
-                  "source": "parser",
-                  "style": null
-                }
-              ]
-            }
-          ],
+          "bbox": {"x0": 10.0, "y0": 20.0, "x1": 400.0, "y1": 80.0},
+          "lines": [{"spans": [...]}],
           "confidence": 0.85,
           "source": "fused"
+        },
+        {
+          "type": "MathBlock",
+          "bbox": {"x0": 50.0, "y0": 100.0, "x1": 300.0, "y1": 150.0},
+          "latex": "\\int_{0}^{\\infty} e^{-x} dx",
+          "confidence": 0.72,
+          "source": "ocr"
         }
       ]
     }
@@ -86,14 +114,54 @@ cargo run -- <input.pdf> --out <dir> --dpi 200
 }
 ```
 
-## Python OCR 브리지
+## Project Structure
 
-- 스크립트: `ocr/bridge/ocr_bridge.py`
-- 입력: 이미지 경로
-- 출력: `[{"text": "...", "bbox": [x0,y0,x1,y1]}]` JSON
-- OCR 엔진은 플러그 가능하도록 설계 (tesseract/paddleocr/easyocr 등 교체 가능)
+```
+src/
+  core/           # Geometry, data models, confidence scoring
+  parser/         # PDF text extraction and layout analysis
+  ocr/            # Image rendering, OCR bridge, layout building
+  fusion/         # Hypothesis alignment and conflict resolution
+  export/         # JSON, Markdown, TXT, HTML exporters
+ocr/bridge/       # Python OCR integration (Tesseract, pix2tex)
+test/             # Test documents
+docs/             # Architecture and implementation documentation
+```
 
-## 디버그 뷰어
+## Debug Viewer
 
-- HTML 페이지에서 parser/ocr/fused 블록을 각각 색상 레이어로 표시
-- 블록 클릭 시 parser_text / ocr_text / final_text / confidence / similarity 노출
+The HTML debug viewer provides interactive visualization:
+
+- Color-coded blocks by type (text/table/figure/math)
+- Click blocks to view parser text, OCR text, confidence, and similarity scores
+- Toggle between parser, OCR, and fused hypotheses
+
+## Configuration
+
+Key parameters in `ocr/bridge/ocr_bridge.py`:
+
+```python
+detect_blocks(
+    min_area=2000,           # Minimum block area in pixels
+    merge_kernel=(15, 10)    # Morphological kernel for block merging
+)
+```
+
+Classification thresholds:
+- Math: symbol_density > 0.2 or 2+ pattern matches
+- Figure: edge_density > 0.08 and area > 50000
+- Table: h_density > 0.01 and v_density > 0.01
+
+## Testing
+
+```bash
+# Unit tests
+cargo test
+
+# Integration test
+./target/release/docstruct test/test_document.pdf --out test_output --dpi 200
+```
+
+## License
+
+MIT

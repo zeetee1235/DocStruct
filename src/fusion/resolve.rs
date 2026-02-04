@@ -64,10 +64,11 @@ fn promote_single(block: Block, provenance: Provenance) -> Block {
             source: provenance,
             debug: None,
         },
-        Block::MathBlock { bbox, .. } => Block::MathBlock {
+        Block::MathBlock { bbox, latex, .. } => Block::MathBlock {
             bbox,
             confidence: score_confidence(provenance == Provenance::Parser, provenance == Provenance::Ocr, None, true),
             source: provenance,
+            latex: latex.clone(),
             debug: None,
         },
     }

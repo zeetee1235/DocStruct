@@ -16,41 +16,59 @@ impl OcrLayoutBuilder {
         Self { bridge }
     }
 
-    fn tokens_to_block(&self, tokens: Vec<OcrToken>) -> Option<Block> {
-        if tokens.is_empty() {
-            return None;
+    fn token_to_block(&self, token: OcrToken) -> Block {
+        let bbox = BBox::new(token.bbox[0], token.bbox[1], token.bbox[2], token.bbox[3]);
+        let confidence = 0.5;
+        let source = Provenance::Ocr;
+        
+        match token.block_type.as_str() {
+            "table" => Block::TableBlock {
+                bbox,
+                confidence,
+                source,
+                debug: None,
+            },
+            "figure" => Block::FigureBlock {
+                bbox,
+                confidence,
+                source,
+                debug: None,
+            },
+            "math" => Block::MathBlock {
+                bbox,
+                confidence,
+                source,
+                latex: token.latex.filter(|s| !s.is_empty()),
+                debug: None,
+            },
+            _ => {
+                // Text block with spans
+                let span = Span {
+                    text: token.text,
+                    bbox,
+                    source: Provenance::Ocr,
+                    style: None,
+                };
+                let line = Line { spans: vec![span] };
+                Block::TextBlock {
+                    bbox,
+                    lines: vec![line],
+                    confidence,
+                    source,
+                    debug: None,
+                }
+            }
         }
-
-        let mut spans = Vec::new();
-        let mut bbox = BBox::new(tokens[0].bbox[0], tokens[0].bbox[1], tokens[0].bbox[2], tokens[0].bbox[3]);
-        for token in tokens {
-            let token_bbox = BBox::new(token.bbox[0], token.bbox[1], token.bbox[2], token.bbox[3]);
-            bbox = bbox.union(&token_bbox);
-            spans.push(Span {
-                text: token.text,
-                bbox: token_bbox,
-                source: Provenance::Ocr,
-                style: None,
-            });
-        }
-        let line = Line { spans };
-        Some(Block::TextBlock {
-            bbox,
-            lines: vec![line],
-            confidence: 0.5,
-            source: Provenance::Ocr,
-            debug: None,
-        })
     }
 }
 
 impl OcrTrack for OcrLayoutBuilder {
     fn analyze_page(&self, rendered_image: &Path, page_idx: usize) -> Result<PageHypothesis> {
         let tokens = self.bridge.run(rendered_image)?;
-        let mut blocks = Vec::new();
-        if let Some(block) = self.tokens_to_block(tokens) {
-            blocks.push(block);
-        }
+        let blocks: Vec<Block> = tokens.into_iter()
+            .map(|token| self.token_to_block(token))
+            .collect();
+        
         Ok(PageHypothesis {
             page_idx,
             blocks,

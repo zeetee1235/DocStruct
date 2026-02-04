@@ -8,6 +8,14 @@ use std::process::Command;
 pub struct OcrToken {
     pub text: String,
     pub bbox: [f32; 4],
+    #[serde(default = "default_block_type")]
+    pub block_type: String,
+    #[serde(default)]
+    pub latex: Option<String>,
+}
+
+fn default_block_type() -> String {
+    "text".to_string()
 }
 
 #[derive(Debug, Clone)]

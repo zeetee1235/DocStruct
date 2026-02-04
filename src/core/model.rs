@@ -74,6 +74,8 @@ pub enum Block {
         bbox: BBox,
         confidence: f32,
         source: Provenance,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        latex: Option<String>,
         debug: Option<BlockDebug>,
     },
 }

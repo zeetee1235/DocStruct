@@ -5,6 +5,8 @@ use anyhow::Result;
 use crate::core::model::{DocumentFinal, PageDebug, PageFinal, PageHypothesis};
 use crate::export::html_debug_export::HtmlDebugExporter;
 use crate::export::json_export::JsonExporter;
+use crate::export::markdown_export::MarkdownExporter;
+use crate::export::text_export::TextExporter;
 use crate::export::Exporter;
 use crate::fusion::{FusionEngine, SimpleFusionEngine};
 use crate::ocr::{bridge::OcrBridge, layout_builder::OcrLayoutBuilder, renderer::PageRenderer, OcrTrack};
@@ -53,6 +55,12 @@ pub fn export_document(document: &DocumentFinal, output: &Path) -> Result<()> {
 
     let html_exporter = HtmlDebugExporter::new(output.join("debug"));
     html_exporter.export(document)?;
+
+    let text_exporter = TextExporter::new(output.to_path_buf());
+    text_exporter.export(document)?;
+
+    let markdown_exporter = MarkdownExporter::new(output.to_path_buf());
+    markdown_exporter.export(document)?;
 
     Ok(())
 }
