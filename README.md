@@ -29,6 +29,35 @@ DocStruct extracts structured content from PDF documents by combining two indepe
 
 ### Setup
 
+#### Option 1: Using Nix (Recommended)
+
+```bash
+# With Nix flakes (recommended)
+nix develop
+
+# Or with legacy nix-shell
+nix-shell
+
+# Install pix2tex (not available in nixpkgs)
+pip install --user 'pix2tex[gui]>=0.1.2'
+
+# Build
+cargo build --release
+```
+
+#### Option 2: Using direnv (auto-loading)
+
+```bash
+# Install direnv if not already installed
+# Then allow the directory
+direnv allow
+
+# Environment will be automatically loaded
+cargo build --release
+```
+
+#### Option 3: Manual Installation
+
 ```bash
 # Install system dependencies (Ubuntu/Debian)
 sudo apt install poppler-utils tesseract-ocr
