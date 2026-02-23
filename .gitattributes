@@ -5,6 +5,9 @@
 # Python OCR bridge
 *.py linguist-language=Python
 
+# Nix configuration
+*.nix linguist-language=Nix
+
 # Exclude test files and outputs from statistics
 test/** linguist-generated=true
 __pycache__/** linguist-generated=true
