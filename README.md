@@ -1,226 +1,231 @@
 # DocStruct
 
-PDF document structure recovery system using parser-OCR cross-validation.
+DocStruct is a PDF document structure recovery tool that combines:
 
-## Overview
+- parser-based extraction from PDF internals
+- OCR-based extraction from rendered page images
+- fusion logic to resolve conflicts and produce final structured output
 
-DocStruct extracts structured content from PDF documents by combining two independent analysis paths: a parser track that analyzes embedded text and fonts, and an OCR track that processes rendered page images. The fusion engine merges both hypotheses, resolving conflicts and assigning confidence scores.
+The project focuses on practical mixed-content documents (text, tables, figures, equations) and multilingual OCR workflows.
 
-## Features
+Korean documentation is available at [README.ko.md](./README.ko.md).
 
-- **Block Type Classification**: Automatically detects and classifies text, tables, figures, and math equations
-- **Dual-Track Analysis**: Parser-based and OCR-based layout hypotheses
-- **Confidence Scoring**: Each element tagged with provenance (parser/ocr/fused) and confidence (0-1)
-- **Multiple Export Formats**:
-  - JSON: Structured data with full metadata
-  - Markdown: Text with embedded images for tables/figures
-  - TXT: Plain text with block type annotations
-  - HTML: Interactive debug viewer
-- **LaTeX OCR**: Extracts mathematical equations as LaTeX using pix2tex
+## Core Capabilities
 
-## Installation
+- Dual-track analysis: `Parser Track` + `OCR Track`
+- Block classification: text, table, figure, math
+- Fusion with confidence/provenance metadata (`parser`, `ocr`, `fused`)
+- Korean support (parser-side Hangul normalization and OCR cross-check workflow)
+- Multiple output formats:
+  - `document.json`
+  - `document.md`
+  - `document.txt`
+  - per-page markdown/text
+  - HTML debug viewer
+
+## Pipeline
+
+```mermaid
+flowchart LR
+    A[Input PDF] --> B[PDF Reader]
+
+    B --> C[Parser Track]
+    B --> D[OCR Track]
+
+    C --> C1[pdftotext extraction]
+    C1 --> C2[Hangul normalization and quality gating]
+    C2 --> C3[Parser layout hypothesis]
+
+    D --> D1[Page render to image]
+    D1 --> D2[Block detection and classification]
+    D2 --> D3[Tesseract OCR and post-processing]
+    D3 --> D4[OCR layout hypothesis]
+
+    C3 --> E[Fusion Engine]
+    D4 --> E
+
+    E --> F[Resolved page model]
+    F --> G1[JSON Export]
+    F --> G2[Markdown Export]
+    F --> G3[Text Export]
+    F --> G4[HTML Debug Export]
+```
+
+## Setup
 
 ### Requirements
 
-- Rust 1.93.0+
+- Rust toolchain
 - Python 3.12+
-- poppler-utils (pdfinfo, pdftotext, pdftoppm)
-- tesseract 5.3+
+- `poppler-utils` (`pdftotext`, `pdftoppm`, `pdfinfo`)
+- `tesseract` (with required language data)
 
-### Setup
-
-#### Option 1: Using Nix (Recommended)
+### Option 1: Nix Flakes (recommended)
 
 ```bash
-# With Nix flakes (recommended)
+cd /path/to/DocStruct
 nix develop
+cargo build
+```
 
-# Or with legacy nix-shell
+### Option 2: Legacy nix-shell
+
+```bash
+cd /path/to/DocStruct
 nix-shell
-
-# Install pix2tex (not available in nixpkgs)
-pip install --user 'pix2tex[gui]>=0.1.2'
-
-# Build
-cargo build --release
+cargo build
 ```
 
-#### Option 2: Using direnv (auto-loading)
+### Option 3: direnv
+
+`.envrc` already contains `use flake`.
 
 ```bash
-# Install direnv if not already installed
-# Then allow the directory
+cd /path/to/DocStruct
 direnv allow
-
-# Environment will be automatically loaded
-cargo build --release
+cargo build
 ```
 
-#### Option 3: Manual Installation
+### Optional: pix2tex for math LaTeX OCR
 
 ```bash
-# Install system dependencies (Ubuntu/Debian)
-sudo apt install poppler-utils tesseract-ocr
-
-# Install Python dependencies
-pip install -r requirements.txt
-
-# Build
-cargo build --release
+pip install --user 'pix2tex[gui]>=0.1.2'
 ```
 
 ## Usage
 
-### Basic Usage
+### Convert one PDF
 
 ```bash
-# Convert a single PDF
-docstruct convert input.pdf
-
-# Specify output directory
-docstruct convert input.pdf -o output_dir
-
-# Adjust DPI for OCR
-docstruct convert input.pdf --dpi 150
-
-# Enable debug outputs
-docstruct convert input.pdf --debug
-
-# Quiet mode (no progress output)
-docstruct convert input.pdf --quiet
+./target/debug/docstruct convert input.pdf -o output_dir --debug
 ```
 
-### Batch Processing
+### Batch convert
 
 ```bash
-# Convert multiple PDFs
-docstruct batch file1.pdf file2.pdf file3.pdf
-
-# With custom output directory
-docstruct batch *.pdf -o results/
+./target/debug/docstruct batch file1.pdf file2.pdf -o output_dir --debug
 ```
 
-### PDF Information
+### Show PDF info
 
 ```bash
-# Show PDF metadata
-docstruct info input.pdf
+./target/debug/docstruct info input.pdf
 ```
 
-### Output Files
+### Useful flags
 
+- `--dpi <int>`: rendering DPI for OCR track (default: 200)
+- `--debug`: write debug assets (rendered pages + HTML overlays)
+- `--quiet`: reduced console logging
+
+## Execution Snapshot (PDF -> TXT)
+
+Command used:
+
+```bash
+./target/debug/docstruct convert tests/fixtures/test_document.pdf -o output_en --debug
 ```
+
+<table>
+<tr>
+<th align="left">Input PDF</th>
+<th align="left">Output TXT (excerpt from <code>korean_output/document.txt</code>)</th>
+</tr>
+<tr>
+<td valign="top">
+<pre><code>tests/fixtures/test_document.pdf
+
+Fixture source:
+tests/fixtures/test_document.tex
+
+Content includes:
+- English technical paragraphs
+- Lists
+- Equations
+- Tables, figure, and code block
+</code></pre>
+</td>
+<td valign="top">
+<pre><code>=== Page 1 ===
+
+OCR Stress Test Document
+Mixed content for PDF -> Image -> Text validation
+Abstract
+This document intentionally mixes plain text, mathematical notation,
+tables, lists, vector drawings, and hyperlinks.
+
+1 Overview
+The following sections combine narrative text with display math
+and inline symbols such as E = mc^2 ...
+
+2 Display Mathematics
+f(x) = integral e^(-t^2) dt = sqrt(pi)
+A x = lambda x
+sum(1/n^2) = pi^2/6
+
+3 Table and Lists
+Feature | Value | Uncertainty | Note
+Temperature | 21.4 | +/- 0.3 | baseline
+Pressure | 101.2 | +/- 0.5 | nominal
+</code></pre>
+</td>
+</tr>
+</table>
+
+## Output Layout
+
+```text
 output_dir/
-├── document.json         # Structured data (all blocks, lines, spans)
-├── document.md          # Markdown with embedded images
-├── document.txt         # Plain text with block markers
-├── page_001.md          # Per-page markdown
+├── document.json
+├── document.md
+├── document.txt
+├── page_001.md
+├── page_001.txt
 ├── figures/
-│   └── page_NNN_TYPE__NN.png  # Extracted images
+│   └── page_NNN_TYPE__NN.png
 └── debug/
-    ├── page_001.html    # Interactive debug viewer
-    └── page_001.png     # Rendered page image
+    ├── page_001.html
+    └── page_001-1.png
 ```
 
-## Architecture
+## Data Model (high-level)
 
-### Pipeline
+- `DocumentFinal`
+  - `pages[]`
+    - `PageFinal`
+      - `blocks[]`
+        - `TextBlock | TableBlock | FigureBlock | MathBlock`
+      - `class`: `digital | scanned | hybrid`
+      - `debug` (optional)
 
-1. **Parser Track**: Extract text positions from PDF internal structure
-2. **OCR Track**: Render pages to images, detect blocks, classify types, run OCR
-3. **Fusion**: Align blocks, compare content, resolve conflicts, assign confidence
-4. **Export**: Generate JSON, Markdown, TXT, and HTML outputs
+Each block includes `bbox`, `confidence`, and `source` provenance.
 
-### Block Classification
+## Development Notes
 
-The OCR bridge classifies blocks based on visual features:
+### Common commands
 
-- **Math**: Pattern matching (∫∑∏∂∇, Greek letters, function names) + symbol density
-- **Figure**: High edge density (>0.08) for graphics and diagrams
-- **Table**: Grid structure detection (horizontal/vertical line density)
-- **Text**: Default classification
-
-### Coordinate System
-
-All coordinates are in page pixel space based on the rendering DPI (default 200).
-
-## Document Schema
-
-```json
-{
-  "pages": [
-    {
-      "page_idx": 0,
-      "class": "digital",
-      "width": 1000,
-      "height": 1400,
-      "blocks": [
-        {
-          "type": "TextBlock",
-          "bbox": {"x0": 10.0, "y0": 20.0, "x1": 400.0, "y1": 80.0},
-          "lines": [{"spans": [...]}],
-          "confidence": 0.85,
-          "source": "fused"
-        },
-        {
-          "type": "MathBlock",
-          "bbox": {"x0": 50.0, "y0": 100.0, "x1": 300.0, "y1": 150.0},
-          "latex": "\\int_{0}^{\\infty} e^{-x} dx",
-          "confidence": 0.72,
-          "source": "ocr"
-        }
-      ]
-    }
-  ]
-}
+```bash
+cargo build
+cargo test
+cargo test parser::hangul
 ```
+
+### Korean extraction behavior
+
+The parser track includes Hangul normalization and quality gating to suppress severely degraded jamo output. Fusion and export layers also include filtering to reduce duplicated/noisy OCR text blocks when parser output is clearly dominant.
 
 ## Project Structure
 
-```
+```text
 src/
-  core/           # Geometry, data models, confidence scoring
-  parser/         # PDF text extraction and layout analysis
-  ocr/            # Image rendering, OCR bridge, layout building
-  fusion/         # Hypothesis alignment and conflict resolution
-  export/         # JSON, Markdown, TXT, HTML exporters
-ocr/bridge/       # Python OCR integration (Tesseract, pix2tex)
-tests/            # Integration tests and test fixtures
-docs/             # Architecture and implementation documentation
-```
-
-## Debug Viewer
-
-The HTML debug viewer provides interactive visualization:
-
-- Color-coded blocks by type (text/table/figure/math)
-- Click blocks to view parser text, OCR text, confidence, and similarity scores
-- Toggle between parser, OCR, and fused hypotheses
-
-## Configuration
-
-Key parameters in `ocr/bridge/ocr_bridge.py`:
-
-```python
-detect_blocks(
-    min_area=2000,           # Minimum block area in pixels
-    merge_kernel=(15, 10)    # Morphological kernel for block merging
-)
-```
-
-Classification thresholds:
-- Math: symbol_density > 0.2 or 2+ pattern matches
-- Figure: edge_density > 0.08 and area > 50000
-- Table: h_density > 0.01 and v_density > 0.01
-
-## Testing
-
-```bash
-# Unit and integration tests
-cargo test
-
-# Test with example PDF
-docstruct convert tests/fixtures/test_document.pdf --dpi 200
+  core/      # geometry, models, confidence
+  parser/    # parser track and text extraction
+  ocr/       # OCR track and bridge integration
+  fusion/    # alignment, comparison, conflict resolution
+  export/    # json/markdown/text/html exporters
+ocr/bridge/  # Python OCR bridge
+tests/       # fixtures and tests
+docs/        # notes and plans
 ```
 
 ## License
