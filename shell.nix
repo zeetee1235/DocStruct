@@ -27,7 +27,7 @@ in pkgs.mkShell {
     pythonEnv
     
     # System dependencies
-    poppler_utils
+    poppler-utils
     tesseract
     
     # Build dependencies
