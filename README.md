@@ -18,16 +18,12 @@ Command used:
 ./target/debug/docstruct convert tests/fixtures/test_document.pdf -o output_en --debug
 ```
 
-<table>
-<tr>
-<th align="left">Input PDF</th>
-<th align="left">Output TXT (excerpt)</th>
-</tr>
-<tr>
-<td valign="top" width="52%">
+### Input PDF (page 1)
+
 <img src="./docs/assets/readme-input-page1.png" alt="Input PDF rendered preview (page 1)" width="100%" />
-</td>
-<td valign="top" width="48%">
+
+### Output TXT (excerpt)
+
 <pre><code>=== Page 1 ===
 
 OCR Stress Test Document
@@ -50,9 +46,6 @@ Feature | Value | Uncertainty | Note
 Temperature | 21.4 | +/- 0.3 | baseline
 Pressure | 101.2 | +/- 0.5 | nominal
 </code></pre>
-</td>
-</tr>
-</table>
 
 ## Core Capabilities
 
