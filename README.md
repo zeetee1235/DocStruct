@@ -71,8 +71,40 @@ cargo build --release
 
 ## Usage
 
+### Basic Usage
+
 ```bash
-./target/release/docstruct <input.pdf> --out <output_dir> --dpi 200
+# Convert a single PDF
+docstruct convert input.pdf
+
+# Specify output directory
+docstruct convert input.pdf -o output_dir
+
+# Adjust DPI for OCR
+docstruct convert input.pdf --dpi 150
+
+# Enable debug outputs
+docstruct convert input.pdf --debug
+
+# Quiet mode (no progress output)
+docstruct convert input.pdf --quiet
+```
+
+### Batch Processing
+
+```bash
+# Convert multiple PDFs
+docstruct batch file1.pdf file2.pdf file3.pdf
+
+# With custom output directory
+docstruct batch *.pdf -o results/
+```
+
+### PDF Information
+
+```bash
+# Show PDF metadata
+docstruct info input.pdf
 ```
 
 ### Output Files
