@@ -1,6 +1,7 @@
 pub mod layout_builder;
 pub mod pdf_reader;
 pub mod text_extractor;
+pub mod hangul;
 
 pub use pdf_reader::PdfReader;
 

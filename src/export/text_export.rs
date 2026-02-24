@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 use anyhow::Result;
 
-use crate::core::model::{Block, DocumentFinal};
+use crate::core::model::{Block, DocumentFinal, Provenance};
 use crate::export::Exporter;
 
 #[derive(Debug, Clone)]
@@ -18,9 +18,9 @@ impl TextExporter {
 
     fn format_block(block: &Block) -> String {
         match block {
-            Block::TextBlock { lines, .. } => {
+            Block::TextBlock { lines, source, .. } => {
                 // Extract text from all spans in all lines
-                lines
+                let text = lines
                     .iter()
                     .map(|line| {
                         line.spans
@@ -30,7 +30,11 @@ impl TextExporter {
                             .join("")
                     })
                     .collect::<Vec<_>>()
-                    .join("\n")
+                    .join("\n");
+                if Self::should_skip_degraded_parser_text(*source, &text) {
+                    return String::new();
+                }
+                text
             }
             Block::TableBlock { bbox, .. } => {
                 format!("[TABLE at x:{:.0} y:{:.0} w:{:.0} h:{:.0}]", 
@@ -45,6 +49,33 @@ impl TextExporter {
                     bbox.x0, bbox.y0, bbox.width(), bbox.height())
             }
         }
+    }
+
+    fn should_skip_degraded_parser_text(source: Provenance, text: &str) -> bool {
+        if source != Provenance::Parser {
+            return false;
+        }
+        let (syllables, jamos) = Self::korean_counts(text);
+        let has_korean = syllables + jamos > 0;
+        has_korean && jamos >= syllables * 2 && jamos >= 8
+    }
+
+    fn korean_counts(text: &str) -> (usize, usize) {
+        let mut syllables = 0usize;
+        let mut jamos = 0usize;
+        for c in text.chars() {
+            let code = c as u32;
+            if (0xAC00..=0xD7A3).contains(&code) {
+                syllables += 1;
+            } else if (0x1100..=0x11FF).contains(&code)
+                || (0x3130..=0x318F).contains(&code)
+                || (0xA960..=0xA97F).contains(&code)
+                || (0xD7B0..=0xD7FF).contains(&code)
+            {
+                jamos += 1;
+            }
+        }
+        (syllables, jamos)
     }
 }
 

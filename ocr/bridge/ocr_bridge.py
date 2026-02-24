@@ -3,6 +3,7 @@ import argparse
 import json
 import re
 import sys
+import unicodedata
 from pathlib import Path
 
 import cv2
@@ -13,6 +14,39 @@ from pytesseract import Output
 
 # Lazy import for pix2tex to avoid slow startup when not needed
 _latex_model = None
+
+
+def combine_hangul_jamos(text: str) -> str:
+    """
+    Combine separated Hangul jamos into complete syllables.
+    
+    Korean characters can be decomposed into jamos (ᄀ, ᅡ, ᆨ, etc.)
+    This function recombines them into complete syllables (가, 각, etc.)
+    """
+    def is_hangul_jamo_or_compat(ch: str) -> bool:
+        code = ord(ch)
+        return (
+            0x1100 <= code <= 0x11FF or
+            0x3130 <= code <= 0x318F or
+            0xA960 <= code <= 0xA97F or
+            0xD7B0 <= code <= 0xD7FF
+        )
+
+    # NFKC converts compatibility jamo (ㄱㅏ) to canonical forms.
+    normalized = unicodedata.normalize("NFKC", text)
+    chars = list(normalized)
+    compact = []
+
+    for i, c in enumerate(chars):
+        if c.isspace():
+            prev = next((p for p in reversed(chars[:i]) if not p.isspace()), None)
+            nxt = next((n for n in chars[i + 1:] if not n.isspace()), None)
+            if prev and nxt and is_hangul_jamo_or_compat(prev) and is_hangul_jamo_or_compat(nxt):
+                continue
+        compact.append(c)
+
+    # NFC recomposes canonical jamo sequences to complete Hangul syllables.
+    return unicodedata.normalize("NFC", "".join(compact))
 
 def get_latex_model():
     """Lazy load LaTeX OCR model."""
@@ -145,8 +179,12 @@ def classify_block_type(roi: np.ndarray, text: str) -> str:
     return "text"
 
 
-def run_ocr(image_path: Path) -> list[dict]:
+def run_ocr(image_path: Path, lang: str = "eng") -> list[dict]:
     """Run block-wise OCR with type classification.
+
+    Args:
+        image_path: Path to the image file
+        lang: Tesseract language code (e.g., 'eng', 'kor', 'eng+kor')
 
     Returns list of blocks with structure:
     {"text": str, "bbox": [x0, y0, x1, y1], "block_type": str, "latex": str (optional)}
@@ -161,8 +199,15 @@ def run_ocr(image_path: Path) -> list[dict]:
         x, y, w, h = block["x"], block["y"], block["w"], block["h"]
         roi = img[y:y+h, x:x+w]
         
-        # Run regular OCR
-        text = pytesseract.image_to_string(roi).strip()
+        # Run regular OCR with specified language
+        # PSM 6: Assume a single uniform block of text
+        # For better Korean support, add OEM 1 (LSTM neural net mode)
+        config = '--psm 6 --oem 1'
+        text = pytesseract.image_to_string(roi, lang=lang, config=config).strip()
+        
+        # Combine separated Hangul jamos
+        text = combine_hangul_jamos(text)
+        
         block_type = classify_block_type(roi, text)
         
         result = {
@@ -197,6 +242,7 @@ def run_ocr(image_path: Path) -> list[dict]:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--image", required=True)
+    parser.add_argument("--lang", default="eng+kor", help="Tesseract language (e.g., eng, kor, eng+kor)")
     args = parser.parse_args()
 
     image_path = Path(args.image)
@@ -204,7 +250,7 @@ def main() -> int:
         print(f"Image not found: {image_path}", file=sys.stderr)
         return 1
 
-    tokens = run_ocr(image_path)
+    tokens = run_ocr(image_path, lang=args.lang)
     print(json.dumps(tokens, ensure_ascii=False))
     return 0
 

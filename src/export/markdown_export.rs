@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use anyhow::Result;
 use image::{GenericImageView, ImageReader};
 
-use crate::core::model::{Block, DocumentFinal};
+use crate::core::model::{Block, DocumentFinal, Provenance};
 use crate::export::Exporter;
 
 #[derive(Debug, Clone)]
@@ -70,7 +70,7 @@ impl MarkdownExporter {
         page_image_path: &PathBuf,
     ) -> Result<String> {
         match block {
-            Block::TextBlock { lines, .. } => {
+            Block::TextBlock { lines, source, .. } => {
                 // Extract text from all spans in all lines
                 let text = lines
                     .iter()
@@ -83,6 +83,9 @@ impl MarkdownExporter {
                     })
                     .collect::<Vec<_>>()
                     .join("\n");
+                if Self::should_skip_degraded_parser_text(*source, &text) {
+                    return Ok(String::new());
+                }
                 Ok(text)
             }
             Block::TableBlock { bbox, .. } => {
@@ -158,6 +161,33 @@ impl MarkdownExporter {
             }
         }
     }
+
+    fn should_skip_degraded_parser_text(source: Provenance, text: &str) -> bool {
+        if source != Provenance::Parser {
+            return false;
+        }
+        let (syllables, jamos) = Self::korean_counts(text);
+        let has_korean = syllables + jamos > 0;
+        has_korean && jamos >= syllables * 2 && jamos >= 8
+    }
+
+    fn korean_counts(text: &str) -> (usize, usize) {
+        let mut syllables = 0usize;
+        let mut jamos = 0usize;
+        for c in text.chars() {
+            let code = c as u32;
+            if (0xAC00..=0xD7A3).contains(&code) {
+                syllables += 1;
+            } else if (0x1100..=0x11FF).contains(&code)
+                || (0x3130..=0x318F).contains(&code)
+                || (0xA960..=0xA97F).contains(&code)
+                || (0xD7B0..=0xD7FF).contains(&code)
+            {
+                jamos += 1;
+            }
+        }
+        (syllables, jamos)
+    }
 }
 
 impl Exporter for MarkdownExporter {
@@ -188,17 +218,24 @@ impl Exporter for MarkdownExporter {
                 } else {
                     // Fallback to simple text representation
                     match block {
-                        Block::TextBlock { lines, .. } => lines
-                            .iter()
-                            .map(|line| {
-                                line.spans
-                                    .iter()
-                                    .map(|span| span.text.as_str())
-                                    .collect::<Vec<_>>()
-                                    .join("")
-                            })
-                            .collect::<Vec<_>>()
-                            .join("\n"),
+                        Block::TextBlock { lines, source, .. } => {
+                            let text = lines
+                                .iter()
+                                .map(|line| {
+                                    line.spans
+                                        .iter()
+                                        .map(|span| span.text.as_str())
+                                        .collect::<Vec<_>>()
+                                        .join("")
+                                })
+                                .collect::<Vec<_>>()
+                                .join("\n");
+                            if Self::should_skip_degraded_parser_text(*source, &text) {
+                                String::new()
+                            } else {
+                                text
+                            }
+                        }
                         Block::TableBlock { bbox, .. } => {
                             format!("\n[TABLE: {:.0}x{:.0} at ({:.0}, {:.0})]\n", 
                                 bbox.width(), bbox.height(), bbox.x0, bbox.y0)
@@ -250,17 +287,24 @@ impl Exporter for MarkdownExporter {
                     self.format_block(block, page.page_idx, block_idx, &page_image_path)?
                 } else {
                     match block {
-                        Block::TextBlock { lines, .. } => lines
-                            .iter()
-                            .map(|line| {
-                                line.spans
-                                    .iter()
-                                    .map(|span| span.text.as_str())
-                                    .collect::<Vec<_>>()
-                                    .join("")
-                            })
-                            .collect::<Vec<_>>()
-                            .join("\n"),
+                        Block::TextBlock { lines, source, .. } => {
+                            let text = lines
+                                .iter()
+                                .map(|line| {
+                                    line.spans
+                                        .iter()
+                                        .map(|span| span.text.as_str())
+                                        .collect::<Vec<_>>()
+                                        .join("")
+                                })
+                                .collect::<Vec<_>>()
+                                .join("\n");
+                            if Self::should_skip_degraded_parser_text(*source, &text) {
+                                String::new()
+                            } else {
+                                text
+                            }
+                        }
                         Block::TableBlock { bbox, .. } => {
                             format!("\n[TABLE: {:.0}x{:.0}]\n", bbox.width(), bbox.height())
                         }

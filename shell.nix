@@ -28,7 +28,7 @@ in pkgs.mkShell {
     
     # System dependencies
     poppler-utils
-    tesseract
+    tesseract5
     
     # Build dependencies
     pkg-config

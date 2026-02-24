@@ -42,7 +42,7 @@
           
           # System dependencies
           poppler-utils  # pdfinfo, pdftotext, pdftoppm
-          tesseract      # OCR engine
+          tesseract5     # OCR engine with multiple languages
           
           # Additional utilities
           pkg-config
