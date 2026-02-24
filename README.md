@@ -8,7 +8,7 @@ DocStruct is a PDF document structure recovery tool that combines:
 
 The project focuses on practical mixed-content documents (text, tables, figures, equations) and multilingual OCR workflows.
 
-Korean documentation is available at [README.ko.md](./README.ko.md).
+Korean documentation is available at [README.ko.md](./docs/README.ko.md).
 
 ## Core Capabilities
 
