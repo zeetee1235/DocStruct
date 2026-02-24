@@ -10,6 +10,53 @@ The project focuses on practical mixed-content documents (text, tables, figures,
 
 Korean documentation is available at [README.ko.md](./docs/README.ko.md).
 
+## Execution Snapshot (PDF -> TXT)
+
+Command used:
+
+```bash
+./target/debug/docstruct convert tests/fixtures/test_document.pdf -o output_en --debug
+```
+
+<table>
+<tr>
+<th align="left">Input PDF</th>
+<th align="left">Output TXT (excerpt)</th>
+</tr>
+<tr>
+<td valign="top" width="52%">
+<p><a href="./tests/fixtures/test_document.pdf"><code>tests/fixtures/test_document.pdf</code></a></p>
+<p>PDF preview (renderer-dependent):</p>
+<img src="./tests/fixtures/test_document.pdf#page=1" alt="Input PDF preview (page 1)" width="100%" />
+<p>If your renderer cannot inline PDFs, open the link above.</p>
+</td>
+<td valign="top" width="48%">
+<pre><code>=== Page 1 ===
+
+OCR Stress Test Document
+Mixed content for PDF -> Image -> Text validation
+Abstract
+This document intentionally mixes plain text, mathematical notation,
+tables, lists, vector drawings, and hyperlinks.
+
+1 Overview
+The following sections combine narrative text with display math
+and inline symbols such as E = mc^2 ...
+
+2 Display Mathematics
+f(x) = integral e^(-t^2) dt = sqrt(pi)
+A x = lambda x
+sum(1/n^2) = pi^2/6
+
+3 Table and Lists
+Feature | Value | Uncertainty | Note
+Temperature | 21.4 | +/- 0.3 | baseline
+Pressure | 101.2 | +/- 0.5 | nominal
+</code></pre>
+</td>
+</tr>
+</table>
+
 ## Core Capabilities
 
 - Dual-track analysis: `Parser Track` + `OCR Track`
@@ -117,60 +164,6 @@ pip install --user 'pix2tex[gui]>=0.1.2'
 - `--dpi <int>`: rendering DPI for OCR track (default: 200)
 - `--debug`: write debug assets (rendered pages + HTML overlays)
 - `--quiet`: reduced console logging
-
-## Execution Snapshot (PDF -> TXT)
-
-Command used:
-
-```bash
-./target/debug/docstruct convert tests/fixtures/test_document.pdf -o output_en --debug
-```
-
-<table>
-<tr>
-<th align="left">Input PDF</th>
-<th align="left">Output TXT (excerpt from <code>korean_output/document.txt</code>)</th>
-</tr>
-<tr>
-<td valign="top">
-<pre><code>tests/fixtures/test_document.pdf
-
-Fixture source:
-tests/fixtures/test_document.tex
-
-Content includes:
-- English technical paragraphs
-- Lists
-- Equations
-- Tables, figure, and code block
-</code></pre>
-</td>
-<td valign="top">
-<pre><code>=== Page 1 ===
-
-OCR Stress Test Document
-Mixed content for PDF -> Image -> Text validation
-Abstract
-This document intentionally mixes plain text, mathematical notation,
-tables, lists, vector drawings, and hyperlinks.
-
-1 Overview
-The following sections combine narrative text with display math
-and inline symbols such as E = mc^2 ...
-
-2 Display Mathematics
-f(x) = integral e^(-t^2) dt = sqrt(pi)
-A x = lambda x
-sum(1/n^2) = pi^2/6
-
-3 Table and Lists
-Feature | Value | Uncertainty | Note
-Temperature | 21.4 | +/- 0.3 | baseline
-Pressure | 101.2 | +/- 0.5 | nominal
-</code></pre>
-</td>
-</tr>
-</table>
 
 ## Output Layout
 
