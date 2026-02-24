@@ -26,9 +26,8 @@ Command used:
 <tr>
 <td valign="top" width="52%">
 <p><a href="./tests/fixtures/test_document.pdf"><code>tests/fixtures/test_document.pdf</code></a></p>
-<p>PDF preview (renderer-dependent):</p>
-<img src="./tests/fixtures/test_document.pdf#page=1" alt="Input PDF preview (page 1)" width="100%" />
-<p>If your renderer cannot inline PDFs, open the link above.</p>
+<p>Rendered preview (page 1):</p>
+<img src="./docs/assets/readme-input-page1.png" alt="Input PDF rendered preview (page 1)" width="100%" />
 </td>
 <td valign="top" width="48%">
 <pre><code>=== Page 1 ===
