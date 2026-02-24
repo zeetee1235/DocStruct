@@ -146,10 +146,10 @@ fn test_parser_pipeline_with_test_document() -> Result<()> {
 #[test]
 #[ignore] // Ignored by default because it requires OCR setup
 fn test_full_pipeline_with_test_document() -> Result<()> {
-    let test_pdf = PathBuf::from("test/test_document.pdf");
-    
+    let test_pdf = PathBuf::from("tests/fixtures/test_document.pdf");
+
     if !test_pdf.exists() {
-        eprintln!("Skipping test: test/test_document.pdf not found");
+        eprintln!("Skipping test: tests/fixtures/test_document.pdf not found");
         return Ok(());
     }
 
@@ -209,10 +209,10 @@ fn test_full_pipeline_with_test_document() -> Result<()> {
 /// Integration test: Verify korean_test.pdf can be opened and has pages
 #[test]
 fn test_korean_pdf_opens() -> Result<()> {
-    let korean_pdf = PathBuf::from("test/korean_test.pdf");
-    
+    let korean_pdf = PathBuf::from("tests/fixtures/korean_test.pdf");
+
     if !korean_pdf.exists() {
-        eprintln!("Skipping test: test/korean_test.pdf not found");
+        eprintln!("Skipping test: tests/fixtures/korean_test.pdf not found");
         return Ok(());
     }
 

@@ -38,14 +38,20 @@ ENV/
 *~
 .DS_Store
 
+# Nix
+.direnv/
+result
+result-*
+
 # Test outputs
-test/output/
-test/debug_images/
-test/docker_images/
-test/docker_output/
+*_output/
+batch_output/
 
 # OCR working directories
 ocr_work/
+ocr/
+
+# Debug outputs
 debug/
 
 # Temporary files

@@ -185,7 +185,7 @@ src/
   fusion/         # Hypothesis alignment and conflict resolution
   export/         # JSON, Markdown, TXT, HTML exporters
 ocr/bridge/       # Python OCR integration (Tesseract, pix2tex)
-test/             # Test documents
+tests/            # Integration tests and test fixtures
 docs/             # Architecture and implementation documentation
 ```
 
@@ -216,11 +216,11 @@ Classification thresholds:
 ## Testing
 
 ```bash
-# Unit tests
+# Unit and integration tests
 cargo test
 
-# Integration test
-./target/release/docstruct test/test_document.pdf --out test_output --dpi 200
+# Test with example PDF
+docstruct convert tests/fixtures/test_document.pdf --dpi 200
 ```
 
 ## License
