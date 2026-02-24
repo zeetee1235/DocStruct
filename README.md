@@ -25,8 +25,6 @@ Command used:
 </tr>
 <tr>
 <td valign="top" width="52%">
-<p><a href="./tests/fixtures/test_document.pdf"><code>tests/fixtures/test_document.pdf</code></a></p>
-<p>Rendered preview (page 1):</p>
 <img src="./docs/assets/readme-input-page1.png" alt="Input PDF rendered preview (page 1)" width="100%" />
 </td>
 <td valign="top" width="48%">
