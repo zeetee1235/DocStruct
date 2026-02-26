@@ -172,7 +172,12 @@ fn convert_batch(
     let mut failed = 0;
 
     for (i, input) in inputs.iter().enumerate() {
-        println!("[{}/{}] Processing: {}", i + 1, inputs.len(), input.display());
+        println!(
+            "[{}/{}] Processing: {}",
+            i + 1,
+            inputs.len(),
+            input.display()
+        );
 
         if !input.exists() {
             eprintln!("  [!] Skipped: file does not exist");
@@ -183,7 +188,14 @@ fn convert_batch(
         let stem = input.file_stem().unwrap().to_string_lossy();
         let output_dir = base_output.join(&*stem);
 
-        match convert_single(input.clone(), Some(output_dir), formats.clone(), dpi, debug, true) {
+        match convert_single(
+            input.clone(),
+            Some(output_dir),
+            formats.clone(),
+            dpi,
+            debug,
+            true,
+        ) {
             Ok(_) => {
                 println!("  [✓] Success");
                 success += 1;

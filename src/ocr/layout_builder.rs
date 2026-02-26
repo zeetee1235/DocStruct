@@ -18,9 +18,9 @@ impl OcrLayoutBuilder {
 
     fn token_to_block(&self, token: OcrToken) -> Block {
         let bbox = BBox::new(token.bbox[0], token.bbox[1], token.bbox[2], token.bbox[3]);
-        let confidence = 0.5;
+        let confidence = token.confidence.clamp(0.0, 1.0);
         let source = Provenance::Ocr;
-        
+
         match token.block_type.as_str() {
             "table" => Block::TableBlock {
                 bbox,
@@ -65,10 +65,11 @@ impl OcrLayoutBuilder {
 impl OcrTrack for OcrLayoutBuilder {
     fn analyze_page(&self, rendered_image: &Path, page_idx: usize) -> Result<PageHypothesis> {
         let tokens = self.bridge.run(rendered_image)?;
-        let blocks: Vec<Block> = tokens.into_iter()
+        let blocks: Vec<Block> = tokens
+            .into_iter()
             .map(|token| self.token_to_block(token))
             .collect();
-        
+
         Ok(PageHypothesis {
             page_idx,
             blocks,

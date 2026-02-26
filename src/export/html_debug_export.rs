@@ -143,7 +143,9 @@ for (const el of document.querySelectorAll('.bbox')) {{
                 image = image_path,
                 blocks = blocks_html
             );
-            let path = self.out_dir.join(format!("page_{:03}.html", page.page_idx + 1));
+            let path = self
+                .out_dir
+                .join(format!("page_{:03}.html", page.page_idx + 1));
             fs::write(path, html)?;
         }
         Ok(())

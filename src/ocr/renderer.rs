@@ -49,10 +49,15 @@ impl PageRenderer {
         }
 
         // pdftoppm will create a file like `<prefix>-1.png` for this page
-        let image_path = self.out_dir.join(format!("page_{:03}-{}.png", page_number, page_number));
+        let image_path = self
+            .out_dir
+            .join(format!("page_{:03}-{}.png", page_number, page_number));
 
         if !image_path.exists() {
-            anyhow::bail!("expected rendered image not found: {}", image_path.display());
+            anyhow::bail!(
+                "expected rendered image not found: {}",
+                image_path.display()
+            );
         }
 
         // We could inspect the image to get exact dimensions in the future.
@@ -60,6 +65,10 @@ impl PageRenderer {
         let width = (1000.0 * self.dpi as f32 / 200.0) as u32;
         let height = (1400.0 * self.dpi as f32 / 200.0) as u32;
 
-        Ok(RenderedPage { path: image_path, width, height })
+        Ok(RenderedPage {
+            path: image_path,
+            width,
+            height,
+        })
     }
 }

@@ -22,9 +22,9 @@ impl SimpleFusionEngine {
 
 impl FusionEngine for SimpleFusionEngine {
     fn fuse(&self, parser: &PageHypothesis, ocr: &PageHypothesis) -> Result<PageFinal> {
-        let aligned = align::align_blocks(&parser.blocks, &ocr.blocks);
-        let resolved = resolve::resolve_blocks(&aligned);
         let page_class = finalize::classify_page(parser, ocr);
+        let aligned = align::align_blocks(&parser.blocks, &ocr.blocks);
+        let resolved = resolve::resolve_blocks(&aligned, page_class);
         Ok(PageFinal {
             page_idx: parser.page_idx,
             class: page_class,

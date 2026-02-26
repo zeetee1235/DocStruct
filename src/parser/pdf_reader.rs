@@ -31,12 +31,15 @@ fn get_page_count(pdf_path: &Path) -> Result<usize> {
     for line in stdout.lines() {
         if let Some(rest) = line.strip_prefix("Pages:") {
             let num_str = rest.trim();
-            let pages: usize = num_str
-                .parse()
-                .with_context(|| format!("failed to parse page count from 'Pages:' line: {num_str}"))?;
+            let pages: usize = num_str.parse().with_context(|| {
+                format!("failed to parse page count from 'Pages:' line: {num_str}")
+            })?;
             return Ok(pages);
         }
     }
 
-    anyhow::bail!("pdfinfo output did not contain a 'Pages:' line for {}", pdf_path.display());
+    anyhow::bail!(
+        "pdfinfo output did not contain a 'Pages:' line for {}",
+        pdf_path.display()
+    );
 }

@@ -152,7 +152,11 @@ pub fn extract_glyph_runs(pdf_path: &Path, page_idx: usize) -> Vec<GlyphRun> {
     // and assign it a page-wide bounding box.
 
     let page_number = page_idx + 1; // pdftotext is 1-based
-    let modes = [PdfToTextMode::Raw, PdfToTextMode::Default, PdfToTextMode::Layout];
+    let modes = [
+        PdfToTextMode::Raw,
+        PdfToTextMode::Default,
+        PdfToTextMode::Layout,
+    ];
     let best_text = modes
         .iter()
         .filter_map(|mode| run_pdftotext(pdf_path, page_number, *mode))
@@ -168,7 +172,10 @@ pub fn extract_glyph_runs(pdf_path: &Path, page_idx: usize) -> Vec<GlyphRun> {
     let text = match best_text {
         Some(text) => text,
         None => {
-            eprintln!("failed to extract text via pdftotext for page {}", page_number);
+            eprintln!(
+                "failed to extract text via pdftotext for page {}",
+                page_number
+            );
             return Vec::new();
         }
     };
@@ -184,7 +191,9 @@ pub fn extract_glyph_runs(pdf_path: &Path, page_idx: usize) -> Vec<GlyphRun> {
 
     // If Korean text remains heavily decomposed after normalization/composition,
     // parser output is likely unreliable for this page. Let OCR dominate instead.
-    if has_korean_chars(&text) && (hangul_quality_score(&text) < -10 || is_degraded_korean_text(&text)) {
+    if has_korean_chars(&text)
+        && (hangul_quality_score(&text) < -10 || is_degraded_korean_text(&text))
+    {
         eprintln!(
             "parser text quality is too low for Korean on page {}. falling back to OCR track",
             page_number

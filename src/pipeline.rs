@@ -9,7 +9,9 @@ use crate::export::markdown_export::MarkdownExporter;
 use crate::export::text_export::TextExporter;
 use crate::export::Exporter;
 use crate::fusion::{FusionEngine, SimpleFusionEngine};
-use crate::ocr::{bridge::OcrBridge, layout_builder::OcrLayoutBuilder, renderer::PageRenderer, OcrTrack};
+use crate::ocr::{
+    bridge::OcrBridge, layout_builder::OcrLayoutBuilder, renderer::PageRenderer, OcrTrack,
+};
 use crate::parser::{layout_builder::ParserLayoutBuilder, pdf_reader::PdfReader, ParserTrack};
 
 #[derive(Debug, Clone)]
@@ -83,7 +85,10 @@ mod tests {
 
     fn temp_output_dir(prefix: &str) -> PathBuf {
         let mut out = std::env::temp_dir();
-        let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis();
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_millis();
         let pid = std::process::id();
         out.push(format!("{prefix}-{pid}-{now}"));
         out

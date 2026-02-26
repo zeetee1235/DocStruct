@@ -37,16 +37,31 @@ impl TextExporter {
                 text
             }
             Block::TableBlock { bbox, .. } => {
-                format!("[TABLE at x:{:.0} y:{:.0} w:{:.0} h:{:.0}]", 
-                    bbox.x0, bbox.y0, bbox.width(), bbox.height())
+                format!(
+                    "[TABLE at x:{:.0} y:{:.0} w:{:.0} h:{:.0}]",
+                    bbox.x0,
+                    bbox.y0,
+                    bbox.width(),
+                    bbox.height()
+                )
             }
             Block::FigureBlock { bbox, .. } => {
-                format!("[FIGURE at x:{:.0} y:{:.0} w:{:.0} h:{:.0}]", 
-                    bbox.x0, bbox.y0, bbox.width(), bbox.height())
+                format!(
+                    "[FIGURE at x:{:.0} y:{:.0} w:{:.0} h:{:.0}]",
+                    bbox.x0,
+                    bbox.y0,
+                    bbox.width(),
+                    bbox.height()
+                )
             }
             Block::MathBlock { bbox, .. } => {
-                format!("[MATH at x:{:.0} y:{:.0} w:{:.0} h:{:.0}]", 
-                    bbox.x0, bbox.y0, bbox.width(), bbox.height())
+                format!(
+                    "[MATH at x:{:.0} y:{:.0} w:{:.0} h:{:.0}]",
+                    bbox.x0,
+                    bbox.y0,
+                    bbox.width(),
+                    bbox.height()
+                )
             }
         }
     }
@@ -82,7 +97,7 @@ impl TextExporter {
 impl Exporter for TextExporter {
     fn export(&self, document: &DocumentFinal) -> Result<()> {
         fs::create_dir_all(&self.out_dir)?;
-        
+
         // Export full document
         let mut full_text = String::new();
         for page in &document.pages {
@@ -96,10 +111,10 @@ impl Exporter for TextExporter {
             }
             full_text.push_str("\n");
         }
-        
+
         let full_path = self.out_dir.join("document.txt");
         fs::write(full_path, full_text)?;
-        
+
         // Export per-page text files
         for page in &document.pages {
             let mut page_text = String::new();
@@ -110,11 +125,13 @@ impl Exporter for TextExporter {
                     page_text.push_str("\n\n");
                 }
             }
-            
-            let page_path = self.out_dir.join(format!("page_{:03}.txt", page.page_idx + 1));
+
+            let page_path = self
+                .out_dir
+                .join(format!("page_{:03}.txt", page.page_idx + 1));
             fs::write(page_path, page_text)?;
         }
-        
+
         Ok(())
     }
 }

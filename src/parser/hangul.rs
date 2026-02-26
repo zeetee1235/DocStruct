@@ -8,41 +8,102 @@ const JUNGSEONG_COUNT: u32 = 21;
 
 // 초성 (Initial consonants) - Choseong
 const CHOSEONG_MAP: &[(char, u32)] = &[
-    ('ᄀ', 0), ('ᄁ', 1), ('ᄂ', 2), ('ᄃ', 3), ('ᄄ', 4),
-    ('ᄅ', 5), ('ᄆ', 6), ('ᄇ', 7), ('ᄈ', 8), ('ᄉ', 9),
-    ('ᄊ', 10), ('ᄋ', 11), ('ᄌ', 12), ('ᄍ', 13), ('ᄎ', 14),
-    ('ᄏ', 15), ('ᄐ', 16), ('ᄑ', 17), ('ᄒ', 18),
+    ('ᄀ', 0),
+    ('ᄁ', 1),
+    ('ᄂ', 2),
+    ('ᄃ', 3),
+    ('ᄄ', 4),
+    ('ᄅ', 5),
+    ('ᄆ', 6),
+    ('ᄇ', 7),
+    ('ᄈ', 8),
+    ('ᄉ', 9),
+    ('ᄊ', 10),
+    ('ᄋ', 11),
+    ('ᄌ', 12),
+    ('ᄍ', 13),
+    ('ᄎ', 14),
+    ('ᄏ', 15),
+    ('ᄐ', 16),
+    ('ᄑ', 17),
+    ('ᄒ', 18),
 ];
 
 // 중성 (Vowels) - Jungseong
 const JUNGSEONG_MAP: &[(char, u32)] = &[
-    ('ᅡ', 0), ('ᅢ', 1), ('ᅣ', 2), ('ᅤ', 3), ('ᅥ', 4),
-    ('ᅦ', 5), ('ᅧ', 6), ('ᅨ', 7), ('ᅩ', 8), ('ᅪ', 9),
-    ('ᅫ', 10), ('ᅬ', 11), ('ᅭ', 12), ('ᅮ', 13), ('ᅯ', 14),
-    ('ᅰ', 15), ('ᅱ', 16), ('ᅲ', 17), ('ᅳ', 18), ('ᅴ', 19),
+    ('ᅡ', 0),
+    ('ᅢ', 1),
+    ('ᅣ', 2),
+    ('ᅤ', 3),
+    ('ᅥ', 4),
+    ('ᅦ', 5),
+    ('ᅧ', 6),
+    ('ᅨ', 7),
+    ('ᅩ', 8),
+    ('ᅪ', 9),
+    ('ᅫ', 10),
+    ('ᅬ', 11),
+    ('ᅭ', 12),
+    ('ᅮ', 13),
+    ('ᅯ', 14),
+    ('ᅰ', 15),
+    ('ᅱ', 16),
+    ('ᅲ', 17),
+    ('ᅳ', 18),
+    ('ᅴ', 19),
     ('ᅵ', 20),
 ];
 
 // 종성 (Final consonants) - Jongseong (0 = no final consonant)
 const JONGSEONG_MAP: &[(char, u32)] = &[
-    ('ᆨ', 1), ('ᆩ', 2), ('ᆪ', 3), ('ᆫ', 4), ('ᆬ', 5),
-    ('ᆭ', 6), ('ᆮ', 7), ('ᆯ', 8), ('ᆰ', 9), ('ᆱ', 10),
-    ('ᆲ', 11), ('ᆳ', 12), ('ᆴ', 13), ('ᆵ', 14), ('ᆶ', 15),
-    ('ᆷ', 16), ('ᆸ', 17), ('ᆹ', 18), ('ᆺ', 19), ('ᆻ', 20),
-    ('ᆼ', 21), ('ᆽ', 22), ('ᆾ', 23), ('ᆿ', 24), ('ᇀ', 25),
-    ('ᇁ', 26), ('ᇂ', 27),
+    ('ᆨ', 1),
+    ('ᆩ', 2),
+    ('ᆪ', 3),
+    ('ᆫ', 4),
+    ('ᆬ', 5),
+    ('ᆭ', 6),
+    ('ᆮ', 7),
+    ('ᆯ', 8),
+    ('ᆰ', 9),
+    ('ᆱ', 10),
+    ('ᆲ', 11),
+    ('ᆳ', 12),
+    ('ᆴ', 13),
+    ('ᆵ', 14),
+    ('ᆶ', 15),
+    ('ᆷ', 16),
+    ('ᆸ', 17),
+    ('ᆹ', 18),
+    ('ᆺ', 19),
+    ('ᆻ', 20),
+    ('ᆼ', 21),
+    ('ᆽ', 22),
+    ('ᆾ', 23),
+    ('ᆿ', 24),
+    ('ᇀ', 25),
+    ('ᇁ', 26),
+    ('ᇂ', 27),
 ];
 
 fn get_choseong_index(c: char) -> Option<u32> {
-    CHOSEONG_MAP.iter().find(|&&(ch, _)| ch == c).map(|&(_, idx)| idx)
+    CHOSEONG_MAP
+        .iter()
+        .find(|&&(ch, _)| ch == c)
+        .map(|&(_, idx)| idx)
 }
 
 fn get_jungseong_index(c: char) -> Option<u32> {
-    JUNGSEONG_MAP.iter().find(|&&(ch, _)| ch == c).map(|&(_, idx)| idx)
+    JUNGSEONG_MAP
+        .iter()
+        .find(|&&(ch, _)| ch == c)
+        .map(|&(_, idx)| idx)
 }
 
 fn get_jongseong_index(c: char) -> Option<u32> {
-    JONGSEONG_MAP.iter().find(|&&(ch, _)| ch == c).map(|&(_, idx)| idx)
+    JONGSEONG_MAP
+        .iter()
+        .find(|&&(ch, _)| ch == c)
+        .map(|&(_, idx)| idx)
 }
 
 fn is_choseong(c: char) -> bool {
@@ -96,14 +157,13 @@ fn compose_syllable(cho: u32, jung: u32, jong: u32) -> Option<char> {
     if cho >= 19 || jung >= 21 || jong >= 28 {
         return None;
     }
-    let code = HANGUL_BASE + (cho * JUNGSEONG_COUNT * JONGSEONG_COUNT) 
-                           + (jung * JONGSEONG_COUNT) 
-                           + jong;
+    let code =
+        HANGUL_BASE + (cho * JUNGSEONG_COUNT * JONGSEONG_COUNT) + (jung * JONGSEONG_COUNT) + jong;
     char::from_u32(code)
 }
 
 /// Combine separated Hangul jamos into complete syllables
-/// 
+///
 /// Example: "한글" -> "한글"
 pub fn combine_hangul(text: &str) -> String {
     // 1) NFKC: compatibility jamo (ㄱㅏ) -> canonical jamo (가)
@@ -124,7 +184,7 @@ pub fn combine_hangul(text: &str) -> String {
         if is_choseong(c) && i + 1 < chars.len() && is_jungseong(chars[i + 1]) {
             let cho_idx = get_choseong_index(c).unwrap();
             let jung_idx = get_jungseong_index(chars[i + 1]).unwrap();
-            
+
             // Check for optional jongseong
             let (jong_idx, skip) = if i + 2 < chars.len() && is_jongseong(chars[i + 2]) {
                 (get_jongseong_index(chars[i + 2]).unwrap(), 3)
@@ -155,10 +215,10 @@ mod tests {
     fn test_combine_simple() {
         // "한" = ᄒ + ᅡ + ᆫ
         assert_eq!(combine_hangul("한"), "한");
-        
+
         // "글" = ᄀ + ᅳ + ᆯ
         assert_eq!(combine_hangul("글"), "글");
-        
+
         // "한글" = 한 + 글
         assert_eq!(combine_hangul("한글"), "한글");
     }
@@ -167,7 +227,7 @@ mod tests {
     fn test_combine_mixed() {
         // Mixed with English
         assert_eq!(combine_hangul("Hello 한글"), "Hello 한글");
-        
+
         // "이것은" = 이 + 거 + 스 + ᆫ (but last ᆫ alone won't compose)
         assert_eq!(combine_hangul("이것은"), "이것은");
     }
@@ -176,7 +236,7 @@ mod tests {
     fn test_no_jongseong() {
         // "가" = ᄀ + ᅡ (no jongseong)
         assert_eq!(combine_hangul("가"), "가");
-        
+
         // "나다" = 나 + 다
         assert_eq!(combine_hangul("나다"), "나다");
     }

@@ -8,6 +8,8 @@ use std::process::Command;
 pub struct OcrToken {
     pub text: String,
     pub bbox: [f32; 4],
+    #[serde(default = "default_confidence")]
+    pub confidence: f32,
     #[serde(default = "default_block_type")]
     pub block_type: String,
     #[serde(default)]
@@ -16,6 +18,10 @@ pub struct OcrToken {
 
 fn default_block_type() -> String {
     "text".to_string()
+}
+
+fn default_confidence() -> f32 {
+    0.5
 }
 
 #[derive(Debug, Clone)]
@@ -28,8 +34,8 @@ pub struct OcrBridge {
 impl OcrBridge {
     pub fn new(work_dir: PathBuf) -> Self {
         let script_path = PathBuf::from("ocr/bridge/ocr_bridge.py");
-        Self { 
-            work_dir, 
+        Self {
+            work_dir,
             script_path,
             lang: "eng+kor".to_string(),
         }
@@ -62,8 +68,8 @@ impl OcrBridge {
         }
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        let tokens: Vec<OcrToken> = serde_json::from_str(&stdout)
-            .with_context(|| "failed to parse OCR JSON response")?;
+        let tokens: Vec<OcrToken> =
+            serde_json::from_str(&stdout).with_context(|| "failed to parse OCR JSON response")?;
         Ok(tokens)
     }
 }

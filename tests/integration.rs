@@ -5,14 +5,16 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use anyhow::Result;
 
 use docstruct::core::geometry::BBox;
-use docstruct::core::model::{Block, DocumentFinal, Line, PageDebug, PageFinal, PageHypothesis, Span, Provenance};
-use docstruct::export::{JsonExporter, HtmlDebugExporter, Exporter};
-use docstruct::fusion::{SimpleFusionEngine, FusionEngine};
-use docstruct::ocr::{OcrTrack, PageRenderer};
-use docstruct::ocr::layout_builder::OcrLayoutBuilder;
+use docstruct::core::model::{
+    Block, DocumentFinal, Line, PageDebug, PageFinal, PageHypothesis, Provenance, Span,
+};
+use docstruct::export::{Exporter, HtmlDebugExporter, JsonExporter};
+use docstruct::fusion::{FusionEngine, SimpleFusionEngine};
 use docstruct::ocr::bridge::OcrBridge;
-use docstruct::parser::{ParserTrack, PdfReader};
+use docstruct::ocr::layout_builder::OcrLayoutBuilder;
+use docstruct::ocr::{OcrTrack, PageRenderer};
 use docstruct::parser::layout_builder::ParserLayoutBuilder;
+use docstruct::parser::{ParserTrack, PdfReader};
 
 /// Unit test: Verify basic fusion logic with synthetic data
 #[test]
@@ -82,7 +84,10 @@ fn test_fusion_with_synthetic_data() -> Result<()> {
 
     // Export to a temporary directory
     let mut out = std::env::temp_dir();
-    let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis();
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_millis();
     let pid = std::process::id();
     out.push(format!("docstruct-test-{}-{}", pid, now));
     let exporter = JsonExporter::new(out.clone());
@@ -104,7 +109,7 @@ fn test_fusion_with_synthetic_data() -> Result<()> {
 #[test]
 fn test_parser_pipeline_with_test_document() -> Result<()> {
     let test_pdf = PathBuf::from("test/test_document.pdf");
-    
+
     // Skip if test PDF doesn't exist (CI environment)
     if !test_pdf.exists() {
         eprintln!("Skipping test: test/test_document.pdf not found");
@@ -113,19 +118,22 @@ fn test_parser_pipeline_with_test_document() -> Result<()> {
 
     let pdf_reader = PdfReader::new(test_pdf.clone())?;
     let page_count = pdf_reader.page_count()?;
-    
+
     // Should have at least 1 page
-    assert!(page_count > 0, "test_document.pdf should have at least one page");
+    assert!(
+        page_count > 0,
+        "test_document.pdf should have at least one page"
+    );
 
     let parser_track = ParserLayoutBuilder::new();
-    
+
     // Test first page parsing
     let page_hypo = parser_track.analyze_page(&test_pdf, 0)?;
-    
+
     assert_eq!(page_hypo.page_idx, 0);
     assert!(page_hypo.width > 0);
     assert!(page_hypo.height > 0);
-    
+
     // Skip if the stub parser does not return any blocks (e.g. in minimal test fixtures)
     if page_hypo.blocks.is_empty() {
         eprintln!("Skipping test: no blocks extracted from test_document.pdf");
@@ -133,12 +141,17 @@ fn test_parser_pipeline_with_test_document() -> Result<()> {
     }
 
     // Check that we can extract text content
-    let text_blocks: Vec<_> = page_hypo.blocks.iter()
+    let text_blocks: Vec<_> = page_hypo
+        .blocks
+        .iter()
         .filter_map(|b| b.text_content())
         .collect();
 
-    assert!(!text_blocks.is_empty(), "Should have text content in blocks");
-    
+    assert!(
+        !text_blocks.is_empty(),
+        "Should have text content in blocks"
+    );
+
     Ok(())
 }
 
@@ -155,7 +168,10 @@ fn test_full_pipeline_with_test_document() -> Result<()> {
 
     // Setup output directory
     let mut out = std::env::temp_dir();
-    let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis();
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_millis();
     out.push(format!("docstruct-integration-{}", now));
     fs::create_dir_all(&out)?;
 
@@ -175,7 +191,7 @@ fn test_full_pipeline_with_test_document() -> Result<()> {
     let rendered = renderer.render_page(&test_pdf, page_idx)?;
     let parser_hypo = parser_track.analyze_page(&test_pdf, page_idx)?;
     let ocr_hypo = ocr_track.analyze_page(&rendered.path, page_idx)?;
-    
+
     let mut fused = fusion.fuse(&parser_hypo, &ocr_hypo)?;
     fused.debug = Some(PageDebug {
         parser_blocks: parser_hypo.blocks.clone(),
@@ -184,7 +200,7 @@ fn test_full_pipeline_with_test_document() -> Result<()> {
     pages.push(fused);
 
     let document = DocumentFinal { pages };
-    
+
     // Export JSON
     let json_exporter = JsonExporter::new(out.clone());
     json_exporter.export(&document)?;
@@ -194,11 +210,20 @@ fn test_full_pipeline_with_test_document() -> Result<()> {
     html_exporter.export(&document)?;
 
     // Verify outputs exist
-    assert!(out.join("document.json").exists(), "JSON output should exist");
-    
+    assert!(
+        out.join("document.json").exists(),
+        "JSON output should exist"
+    );
+
     let json_content = fs::read_to_string(out.join("document.json"))?;
-    assert!(json_content.contains("pages"), "JSON should contain pages array");
-    assert!(json_content.contains("blocks"), "JSON should contain blocks");
+    assert!(
+        json_content.contains("pages"),
+        "JSON should contain pages array"
+    );
+    assert!(
+        json_content.contains("blocks"),
+        "JSON should contain blocks"
+    );
 
     // Cleanup
     let _ = fs::remove_dir_all(&out);
@@ -218,13 +243,16 @@ fn test_korean_pdf_opens() -> Result<()> {
 
     let pdf_reader = PdfReader::new(korean_pdf.clone())?;
     let page_count = pdf_reader.page_count()?;
-    
-    assert!(page_count > 0, "korean_test.pdf should have at least one page");
+
+    assert!(
+        page_count > 0,
+        "korean_test.pdf should have at least one page"
+    );
 
     let parser_track = ParserLayoutBuilder::new();
     let page_hypo = parser_track.analyze_page(&korean_pdf, 0)?;
-    
+
     assert_eq!(page_hypo.page_idx, 0);
-    
+
     Ok(())
 }

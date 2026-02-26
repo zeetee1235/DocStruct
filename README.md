@@ -1,64 +1,64 @@
+<p align="center">
+  <img src="./docs/assets/docstruct_logo.png" alt="DocStruct logo" width="220" />
+</p>
+
 # DocStruct
 
-DocStruct is a PDF document structure recovery tool that combines:
+DocStruct is a PDF document structure recovery tool that combines parser extraction, OCR extraction, and a fusion layer to produce structured outputs.
 
-- parser-based extraction from PDF internals
-- OCR-based extraction from rendered page images
-- fusion logic to resolve conflicts and produce final structured output
+- Parser track: extract text/layout from PDF internals
+- OCR track: render pages and run block/text recognition
+- Fusion track: align/resolve parser and OCR outputs with confidence metadata
 
-The project focuses on practical mixed-content documents (text, tables, figures, equations) and multilingual OCR workflows.
+Korean documentation: [docs/README.ko.md](./docs/README.ko.md)
 
-Korean documentation is available at [README.ko.md](./docs/README.ko.md).
+## Snapshot
 
-## Execution Snapshot (PDF -> TXT)
-
-Command used:
+Command:
 
 ```bash
 ./target/debug/docstruct convert tests/fixtures/test_document.pdf -o output_en --debug
 ```
 
-### Input PDF (page 1)
-
-<img src="./docs/assets/readme-input-page1.png" alt="Input PDF rendered preview (page 1)" width="100%" />
-
-### Output TXT (excerpt)
-
-<pre><code>=== Page 1 ===
-
+<table>
+  <tr>
+    <th>PDF Page 1</th>
+    <th>PDF Page 2</th>
+    <th>Extracted Text</th>
+  </tr>
+  <tr>
+    <td><img src="./docs/assets/readme-input-page1.png" alt="Input PDF page 1" width="100%" /></td>
+    <td><img src="./docs/assets/readme-input-page2.png" alt="Input PDF page 2" width="100%" /></td>
+    <td>
+      <pre><code>=== Page 1 ===
 OCR Stress Test Document
 Mixed content for PDF -> Image -> Text validation
+
 Abstract
-This document intentionally mixes plain text, mathematical notation,
-tables, lists, vector drawings, and hyperlinks.
+This document intentionally mixes plain text,
+mathematical notation, tables, lists, vector drawings,
+and hyperlinks.
 
-1 Overview
-The following sections combine narrative text with display math
-and inline symbols such as E = mc^2 ...
-
-2 Display Mathematics
-f(x) = integral e^(-t^2) dt = sqrt(pi)
-A x = lambda x
-sum(1/n^2) = pi^2/6
-
-3 Table and Lists
+=== Page 2 ===
+Table and Lists
 Feature | Value | Uncertainty | Note
-Temperature | 21.4 | +/- 0.3 | baseline
-Pressure | 101.2 | +/- 0.5 | nominal
-</code></pre>
+Temperature | 21.4 | +/- 0.3 | baseline</code></pre>
+    </td>
+  </tr>
+</table>
 
-## Core Capabilities
+## Features
 
-- Dual-track analysis: `Parser Track` + `OCR Track`
-- Block classification: text, table, figure, math
-- Fusion with confidence/provenance metadata (`parser`, `ocr`, `fused`)
-- Korean support (parser-side Hangul normalization and OCR cross-check workflow)
-- Multiple output formats:
+- Dual-track analysis (`parser` + `ocr`)
+- Text/table/figure/math block modeling
+- Provenance and confidence fields in final output
+- Korean-focused normalization and OCR noise filtering
+- Output targets:
   - `document.json`
   - `document.md`
   - `document.txt`
-  - per-page markdown/text
-  - HTML debug viewer
+  - page-level markdown/text
+  - debug HTML overlays
 
 ## Pipeline
 
@@ -70,34 +70,36 @@ flowchart LR
     B --> D[OCR Track]
 
     C --> C1[pdftotext extraction]
-    C1 --> C2[Hangul normalization and quality gating]
-    C2 --> C3[Parser layout hypothesis]
+    C1 --> C2[Normalization and quality checks]
+    C2 --> C3[Parser hypothesis]
 
-    D --> D1[Page render to image]
-    D1 --> D2[Block detection and classification]
-    D2 --> D3[Tesseract OCR and post-processing]
-    D3 --> D4[OCR layout hypothesis]
+    D --> D1[Page render]
+    D1 --> D2[Block detect and classify]
+    D2 --> D3[Tesseract and post-processing]
+    D3 --> D4[OCR hypothesis]
 
-    C3 --> E[Fusion Engine]
+    C3 --> E[Fusion]
     D4 --> E
 
     E --> F[Resolved page model]
-    F --> G1[JSON Export]
-    F --> G2[Markdown Export]
-    F --> G3[Text Export]
-    F --> G4[HTML Debug Export]
+    F --> G1[JSON]
+    F --> G2[Markdown]
+    F --> G3[Text]
+    F --> G4[Debug HTML]
 ```
+
+Detailed design: [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)
 
 ## Setup
 
-### Requirements
+Requirements:
 
 - Rust toolchain
 - Python 3.12+
 - `poppler-utils` (`pdftotext`, `pdftoppm`, `pdfinfo`)
-- `tesseract` (with required language data)
+- `tesseract` with required language data
 
-### Option 1: Nix Flakes (recommended)
+Nix Flakes:
 
 ```bash
 cd /path/to/DocStruct
@@ -105,7 +107,7 @@ nix develop
 cargo build
 ```
 
-### Option 2: Legacy nix-shell
+Legacy nix-shell:
 
 ```bash
 cd /path/to/DocStruct
@@ -113,17 +115,7 @@ nix-shell
 cargo build
 ```
 
-### Option 3: direnv
-
-`.envrc` already contains `use flake`.
-
-```bash
-cd /path/to/DocStruct
-direnv allow
-cargo build
-```
-
-### Optional: pix2tex for math LaTeX OCR
+Optional math OCR (pix2tex):
 
 ```bash
 pip install --user 'pix2tex[gui]>=0.1.2'
@@ -131,29 +123,29 @@ pip install --user 'pix2tex[gui]>=0.1.2'
 
 ## Usage
 
-### Convert one PDF
+Convert one PDF:
 
 ```bash
 ./target/debug/docstruct convert input.pdf -o output_dir --debug
 ```
 
-### Batch convert
+Batch convert:
 
 ```bash
 ./target/debug/docstruct batch file1.pdf file2.pdf -o output_dir --debug
 ```
 
-### Show PDF info
+Inspect PDF info:
 
 ```bash
 ./target/debug/docstruct info input.pdf
 ```
 
-### Useful flags
+Useful flags:
 
-- `--dpi <int>`: rendering DPI for OCR track (default: 200)
-- `--debug`: write debug assets (rendered pages + HTML overlays)
-- `--quiet`: reduced console logging
+- `--dpi <int>`: render DPI for OCR (default: 200)
+- `--debug`: write debug assets
+- `--quiet`: reduce console logs
 
 ## Output Layout
 
@@ -171,21 +163,7 @@ output_dir/
     └── page_001-1.png
 ```
 
-## Data Model (high-level)
-
-- `DocumentFinal`
-  - `pages[]`
-    - `PageFinal`
-      - `blocks[]`
-        - `TextBlock | TableBlock | FigureBlock | MathBlock`
-      - `class`: `digital | scanned | hybrid`
-      - `debug` (optional)
-
-Each block includes `bbox`, `confidence`, and `source` provenance.
-
-## Development Notes
-
-### Common commands
+## Development
 
 ```bash
 cargo build
@@ -193,23 +171,7 @@ cargo test
 cargo test parser::hangul
 ```
 
-### Korean extraction behavior
-
-The parser track includes Hangul normalization and quality gating to suppress severely degraded jamo output. Fusion and export layers also include filtering to reduce duplicated/noisy OCR text blocks when parser output is clearly dominant.
-
-## Project Structure
-
-```text
-src/
-  core/      # geometry, models, confidence
-  parser/    # parser track and text extraction
-  ocr/       # OCR track and bridge integration
-  fusion/    # alignment, comparison, conflict resolution
-  export/    # json/markdown/text/html exporters
-ocr/bridge/  # Python OCR bridge
-tests/       # fixtures and tests
-docs/        # notes and plans
-```
+Contributing guide: [CONTRIBUTING.md](./CONTRIBUTING.md)
 
 ## License
 
