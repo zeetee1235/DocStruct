@@ -22,18 +22,20 @@ Command:
 
 <table>
   <tr>
-    <th width="50%">PDF Page 1</th>
-    <th width="50%">PDF Page 2</th>
+    <th width="33%">PDF Page 1</th>
+    <th width="33%">PDF Page 2</th>
+    <th width="33%">PDF Page 3</th>
   </tr>
   <tr>
     <td><img src="./docs/assets/readme-input-page1.png" alt="Input PDF page 1" width="100%" /></td>
     <td><img src="./docs/assets/readme-input-page2.png" alt="Input PDF page 2" width="100%" /></td>
+    <td><img src="./docs/assets/readme-input-page3.png" alt="Input PDF page 3" width="100%" /></td>
   </tr>
 </table>
 
 ### Full Extracted Text (`document.txt`)
 
-```text
+<pre style="max-height: 460px; overflow: auto; border: 1px solid #d0d7de; padding: 12px; background: #f6f8fa;"><code>
 === Page 1 ===
 
 OCR Stress Test Document
@@ -204,7 +206,7 @@ text for dropped symbols, merged This concludes the synthetic PDF. Inspect the e
 Compare the OCR output lines, and mis-ordered with known ground truth sections.
 
 [MATH at x:261 y:835 w:229 h:40]
-```
+</code></pre>
 
 ## Features
 
