@@ -1,10 +1,5 @@
 # Contributing
 
-## Scope
-
-- Keep changes focused and reviewable.
-- Prefer small PRs over large mixed changes.
-
 ## Local Workflow
 
 ```bash
@@ -27,6 +22,5 @@ For OCR-related changes, run at least one fixture conversion:
 
 ## Style
 
-- Follow existing Rust and Python style in this repository.
 - Keep comments short and technical.
 - Avoid adding dependencies without clear need.
