@@ -35,7 +35,10 @@ Command:
 
 ### Full Extracted Text (`document.txt`)
 
-<textarea readonly style="width: 100%; height: 460px; border: 1px solid #d0d7de; padding: 12px; box-sizing: border-box; background: #f6f8fa; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; line-height: 1.45;">
+<details>
+<summary>Show Full Text</summary>
+
+```text
 === Page 1 ===
 
 OCR Stress Test Document
@@ -206,7 +209,9 @@ text for dropped symbols, merged This concludes the synthetic PDF. Inspect the e
 Compare the OCR output lines, and mis-ordered with known ground truth sections.
 
 [MATH at x:261 y:835 w:229 h:40]
-</textarea>
+```
+
+</details>
 
 ## Features
 
