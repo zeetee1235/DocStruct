@@ -27,12 +27,14 @@ pub fn resolve_blocks(alignment: &AlignmentResult, page_class: PageClass) -> Vec
         PageClass::Digital => {
             let blocks = filter_redundant_ocr_text_blocks(blocks);
             let blocks = filter_low_quality_ocr_text_blocks(blocks, true);
-            filter_korean_ocr_when_parser_reliable(blocks, true)
+            let blocks = filter_korean_ocr_when_parser_reliable(blocks, true);
+            filter_ocr_text_when_parser_reliable(blocks, page_class)
         }
         PageClass::Hybrid => {
             let blocks = filter_redundant_ocr_text_blocks(blocks);
             let blocks = filter_low_quality_ocr_text_blocks(blocks, true);
-            filter_korean_ocr_when_parser_reliable(blocks, false)
+            let blocks = filter_korean_ocr_when_parser_reliable(blocks, false);
+            filter_ocr_text_when_parser_reliable(blocks, page_class)
         }
         PageClass::Scanned => filter_low_quality_ocr_text_blocks(blocks, false),
     }
@@ -461,7 +463,6 @@ fn filter_korean_ocr_when_parser_reliable(blocks: Vec<Block>, strict: bool) -> V
         .filter(|block| match block {
             Block::TextBlock {
                 source: Provenance::Ocr,
-                bbox,
                 ..
             } => {
                 let ocr_text = block.text_content().unwrap_or_default();
@@ -469,11 +470,73 @@ fn filter_korean_ocr_when_parser_reliable(blocks: Vec<Block>, strict: bool) -> V
                     return true;
                 }
                 let _ = strict;
-                let _ = bbox;
                 // Accuracy-first mode: if parser Korean is reliable, suppress OCR Korean text.
                 false
             }
             _ => true,
+        })
+        .collect()
+}
+
+fn parser_reliable_for_accuracy(blocks: &[Block]) -> bool {
+    let parser_texts: Vec<String> = blocks
+        .iter()
+        .filter_map(|block| match block {
+            Block::TextBlock {
+                source: Provenance::Parser | Provenance::Fused,
+                ..
+            } => block.text_content(),
+            _ => None,
+        })
+        .collect();
+
+    if parser_texts.is_empty() {
+        return false;
+    }
+
+    let parser_chars = parser_texts
+        .iter()
+        .map(|t| t.chars().count())
+        .sum::<usize>();
+    let parser_text_blocks = parser_texts.len();
+    let parser_korean_quality = parser_texts
+        .iter()
+        .map(|t| korean_text_quality(t))
+        .max()
+        .unwrap_or(i32::MIN);
+
+    let ocr_chars = blocks
+        .iter()
+        .filter_map(|block| match block {
+            Block::TextBlock {
+                source: Provenance::Ocr,
+                ..
+            } => block.text_content().map(|t| t.chars().count()),
+            _ => None,
+        })
+        .sum::<usize>();
+
+    parser_chars >= 220
+        && parser_text_blocks >= 1
+        && (ocr_chars == 0 || parser_chars.saturating_mul(10) >= ocr_chars.saturating_mul(7))
+        && parser_korean_quality >= -2
+}
+
+fn filter_ocr_text_when_parser_reliable(blocks: Vec<Block>, page_class: PageClass) -> Vec<Block> {
+    if page_class == PageClass::Scanned || !parser_reliable_for_accuracy(&blocks) {
+        return blocks;
+    }
+
+    blocks
+        .into_iter()
+        .filter(|block| {
+            !matches!(
+                block,
+                Block::TextBlock {
+                    source: Provenance::Ocr,
+                    ..
+                }
+            )
         })
         .collect()
 }
@@ -660,12 +723,46 @@ mod tests {
             BBox::new(20.0, 520.0, 260.0, 560.0),
         );
 
-        let filtered = filter_korean_ocr_when_parser_reliable(vec![parser, ocr_korean, ocr_english], true);
+        let filtered =
+            filter_korean_ocr_when_parser_reliable(vec![parser, ocr_korean, ocr_english], true);
         assert_eq!(filtered.len(), 2);
-        assert!(filtered.iter().any(|b| matches!(b, Block::TextBlock { source: Provenance::Ocr, .. })));
+        assert!(filtered.iter().any(|b| matches!(
+            b,
+            Block::TextBlock {
+                source: Provenance::Ocr,
+                ..
+            }
+        )));
         assert!(!filtered.iter().any(|b| {
-            matches!(b, Block::TextBlock { source: Provenance::Ocr, .. })
-                && b.text_content().unwrap_or_default().contains("문서")
+            matches!(
+                b,
+                Block::TextBlock {
+                    source: Provenance::Ocr,
+                    ..
+                }
+            ) && b.text_content().unwrap_or_default().contains("문서")
         }));
+    }
+
+    #[test]
+    fn drops_all_ocr_text_when_parser_is_reliable_non_scanned() {
+        let parser = text_block(
+            "DocStruct Stress Test Comprehensive PDF Feature Test mixed content equations tables graphics symbols \
+            section one narrative text with multiple clauses and punctuation for parser dominance \
+            section two equations and inline notation with additional wording to increase reliable parser coverage \
+            section three tables lists diagrams hyperlinks and code fragments to represent broad page coverage",
+            Provenance::Parser,
+            BBox::new(0.0, 0.0, 900.0, 700.0),
+        );
+        let ocr_noise = text_block(
+            "VxE=——, ot' V-B=0",
+            Provenance::Ocr,
+            BBox::new(40.0, 710.0, 420.0, 760.0),
+        );
+
+        let filtered =
+            filter_ocr_text_when_parser_reliable(vec![parser, ocr_noise], PageClass::Hybrid);
+        assert_eq!(filtered.len(), 1);
+        assert_eq!(filtered[0].provenance(), Provenance::Parser);
     }
 }

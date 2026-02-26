@@ -86,6 +86,9 @@ impl MarkdownExporter {
                 if Self::should_skip_degraded_parser_text(*source, &text) {
                     return Ok(String::new());
                 }
+                if Self::should_skip_noisy_ocr_text(*source, &text) {
+                    return Ok(String::new());
+                }
                 Ok(text)
             }
             Block::TableBlock { bbox, .. } => {
@@ -156,6 +159,31 @@ impl MarkdownExporter {
         has_korean && jamos >= syllables * 2 && jamos >= 8
     }
 
+    fn should_skip_noisy_ocr_text(source: Provenance, text: &str) -> bool {
+        if source != Provenance::Ocr {
+            return false;
+        }
+        let compact = text.split_whitespace().collect::<String>();
+        if compact.chars().count() <= 2 {
+            return true;
+        }
+
+        let alnum_or_hangul = compact
+            .chars()
+            .filter(|c| c.is_ascii_alphanumeric() || ('가'..='힣').contains(c))
+            .count();
+        let total = compact.chars().count();
+        if total > 0 && alnum_or_hangul * 2 < total {
+            return true;
+        }
+
+        let symbol_heavy = text
+            .chars()
+            .filter(|c| !c.is_alphanumeric() && !c.is_whitespace())
+            .count();
+        symbol_heavy >= 8 && symbol_heavy > alnum_or_hangul
+    }
+
     fn korean_counts(text: &str) -> (usize, usize) {
         let mut syllables = 0usize;
         let mut jamos = 0usize;
@@ -216,6 +244,8 @@ impl Exporter for MarkdownExporter {
                                 .collect::<Vec<_>>()
                                 .join("\n");
                             if Self::should_skip_degraded_parser_text(*source, &text) {
+                                String::new()
+                            } else if Self::should_skip_noisy_ocr_text(*source, &text) {
                                 String::new()
                             } else {
                                 text
@@ -305,6 +335,8 @@ impl Exporter for MarkdownExporter {
                                 .collect::<Vec<_>>()
                                 .join("\n");
                             if Self::should_skip_degraded_parser_text(*source, &text) {
+                                String::new()
+                            } else if Self::should_skip_noisy_ocr_text(*source, &text) {
                                 String::new()
                             } else {
                                 text
