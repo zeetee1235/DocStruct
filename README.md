@@ -207,8 +207,6 @@ Ww);
 text for dropped symbols, merged This concludes the synthetic PDF. Inspect the extracted
 
 Compare the OCR output lines, and mis-ordered with known ground truth sections.
-
-[MATH at x:261 y:835 w:229 h:40]
 ```
 
 </details>
