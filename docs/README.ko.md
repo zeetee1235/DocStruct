@@ -91,8 +91,6 @@ Artificial intelligence has become important.
 이문서는 OCR 시스템이영어와한글을동시에처리할수있는지확인하기위한테스트입니다.
 This document tests whether the OCR system can process both English and Korean.
 2
-
-
 ```
 
 </details>

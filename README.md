@@ -84,32 +84,6 @@ The table mixes numbers, symbols, and words to see how column boundaries are rec
 
 1
 
-Document Test
-
-Mixed
-
-for PDF
-
-validation Image Text content
-
-January 2026
-
-OCR drawings, hyperlinks. probe how well pipeline vector meant
-
-VE = p/e, E = mc?, and probability notation P(X
-
-(e.g. OCR. differences and line wraps layout-aware Repeated words with subtle stress
-
-kernels) kernel vs. are present to spot hallucinations.
-
-edt =r, fx) =
-
-Ax = x,
-
-o | 2
-
-子 ( sin 刃 =e". (sint + t cost).
-
 
 === Page 2 ===
 
@@ -151,24 +125,6 @@ Figure 1: Sine-like curve with annotations and grid.
 1
 Footnotes are included to see if ordering is preserved.
 
-Feature
-
-Note
-
-Temperature (°C) 21.4 +0.3 baseline Pressure (kPa) 101.2 +0.5 nominal Accuracy (%) 98.7 士 0.1 high-confidence Latency (ms) 42 +5 measured on edge 21.4 baseline 士 0.3 nominal 101.2 士 0.5 high-confidence 98.7 measured on edge
-
-Structured data with mixed Table 1: units.
-
-Top-level bullet with a hyperlink: https: //example.com/data
-
-Another bullet with emphasized text and a footnote]
-
-Capture inline math such as <, 3,7.
-
-peak 一 - ~ 7/2 oscillation origin
-
-Sine-like curve with annotations and grid. Figure 1:
-
 
 === Page 3 ===
 
@@ -194,19 +150,6 @@ This concludes the synthetic PDF. Inspect the extracted text for dropped symbols
 lines, and mis-ordered sections. Compare the OCR output with the known ground truth
 here to quantify accuracy.
 
-Stress Paragraph Test
-
-fox jumps detect hallucination: quick brown over the lazy dog,
-
-(int
-
-exp(-0.5 pow (i double 2.0,
-
-Ww);
-
-text for dropped symbols, merged This concludes the synthetic PDF. Inspect the extracted
-
-Compare the OCR output lines, and mis-ordered with known ground truth sections.
 ```
 
 </details>
