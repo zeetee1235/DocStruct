@@ -5,9 +5,12 @@ on:
     tags:
       - 'v*'
 
+permissions:
+  contents: write
+
 jobs:
   build:
-    name: Build and Release
+    name: Build (${{ matrix.os }}, ${{ matrix.target }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -35,51 +38,52 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
-      - name: Install dependencies (Ubuntu)
-        if: matrix.os == 'ubuntu-latest'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            tesseract-ocr \
-            tesseract-ocr-kor \
-            poppler-utils \
-            python3 \
-            python3-pip \
-            python3-venv
-
-      - name: Install dependencies (macOS)
-        if: matrix.os == 'macos-latest'
-        run: |
-          brew install tesseract tesseract-lang poppler python@3.12
-
-      - name: Setup Python virtual environment
-        run: |
-          python3 -m venv venv
-          
-      - name: Install Python dependencies
-        run: |
-          source venv/bin/activate
-          pip install -r requirements.txt
-
       - name: Build release binary
-        run: |
-          cargo build --release --target ${{ matrix.target }}
+        run: cargo build --release --target ${{ matrix.target }}
 
       - name: Strip binary (Linux/macOS)
-        if: matrix.os != 'windows-latest'
-        run: |
-          strip target/${{ matrix.target }}/release/${{ matrix.artifact_name }}
+        run: strip target/${{ matrix.target }}/release/${{ matrix.artifact_name }}
 
       - name: Create tarball
         run: |
           cd target/${{ matrix.target }}/release
           tar czf ${{ matrix.asset_name }}.tar.gz ${{ matrix.artifact_name }}
-          mv ${{ matrix.asset_name }}.tar.gz ../../../
+          mv ${{ matrix.asset_name }}.tar.gz "$GITHUB_WORKSPACE/"
 
-      - name: Upload binary to release
-        uses: softprops/action-gh-release@v1
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
         with:
-          files: ${{ matrix.asset_name }}.tar.gz
+          name: ${{ matrix.asset_name }}
+          path: ${{ matrix.asset_name }}.tar.gz
+          if-no-files-found: error
+
+  publish:
+    name: Publish Release
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: docstruct-*
+          path: release-assets
+          merge-multiple: true
+
+      - name: Verify downloaded assets
+        run: |
+          ls -lah release-assets
+          test -n "$(ls -1 release-assets/*.tar.gz 2>/dev/null)"
+
+      - name: Upload binaries to release
+        run: |
+          gh release upload "${GITHUB_REF_NAME}" release-assets/*.tar.gz --clobber
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update release notes
+        uses: softprops/action-gh-release@v2
+        with:
           body: |
             ## Installation
 
@@ -104,16 +108,9 @@ jobs:
             ## Usage
 
             ```bash
-            # Convert a single PDF
             ./docstruct convert input.pdf -o output_dir
-
-            # With debug output
             ./docstruct convert input.pdf -o output_dir --debug
-
-            # Batch convert
             ./docstruct batch *.pdf -o output_dir
-
-            # Show PDF info
             ./docstruct info input.pdf
             ```
         env:
