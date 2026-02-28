@@ -1,0 +1,11 @@
+.git
+.gitignore
+target
+output*
+*_output
+batch_output
+korean_output
+stress_output
+test_document_output
+.envrc
+flake.lock

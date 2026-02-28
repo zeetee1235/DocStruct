@@ -109,6 +109,34 @@ Optional math OCR (pix2tex):
 pip install --user 'pix2tex[gui]>=0.1.2'
 ```
 
+## Docker
+
+Build image:
+
+```bash
+docker build -t docstruct:latest .
+```
+
+Run convert command (mount current directory):
+
+```bash
+docker run --rm -v "$PWD:/work" -w /work docstruct:latest \
+  convert input.pdf -o output_dir --debug
+```
+
+Run info command:
+
+```bash
+docker run --rm -v "$PWD:/work" -w /work docstruct:latest \
+  info input.pdf
+```
+
+Optional: include pix2tex in image build (larger image, slower build):
+
+```bash
+docker build --build-arg INSTALL_PIX2TEX=1 -t docstruct:latest .
+```
+
 ## Usage
 
 | Command | Purpose |
