@@ -4,6 +4,8 @@
 
 # DocStruct
 
+![Build](https://img.shields.io/github/actions/workflow/status/zeetee1235/DocStruct/ci.yml?branch=main&style=for-the-badge)
+![Docker Image](https://img.shields.io/github/actions/workflow/status/zeetee1235/DocStruct/docker-image.yml?style=for-the-badge&label=Docker%20Image)
 ![Last Commit](https://img.shields.io/github/last-commit/zeetee1235/DocStruct?style=for-the-badge)
 ![License: MIT](https://img.shields.io/badge/License-MIT-1f2937?style=for-the-badge)
 
@@ -109,7 +111,9 @@ Optional math OCR (pix2tex):
 pip install --user 'pix2tex[gui]>=0.1.2'
 ```
 
-## Docker
+## Usage
+
+### 1) Docker (Recommended)
 
 Build image:
 
@@ -117,14 +121,14 @@ Build image:
 docker build -t docstruct:latest .
 ```
 
-Run convert command (mount current directory):
+Convert PDF:
 
 ```bash
 docker run --rm -v "$PWD:/work" -w /work docstruct:latest \
   convert input.pdf -o output_dir --debug
 ```
 
-Run info command:
+Inspect PDF info:
 
 ```bash
 docker run --rm -v "$PWD:/work" -w /work docstruct:latest \
@@ -137,7 +141,25 @@ Optional: include pix2tex in image build (larger image, slower build):
 docker build --build-arg INSTALL_PIX2TEX=1 -t docstruct:latest .
 ```
 
-## Usage
+### 2) Nix (Local)
+
+Nix Flakes:
+
+```bash
+nix develop
+cargo build
+./target/debug/docstruct convert input.pdf -o output_dir --debug
+```
+
+Legacy nix-shell:
+
+```bash
+nix-shell
+cargo build
+./target/debug/docstruct convert input.pdf -o output_dir --debug
+```
+
+Common commands:
 
 | Command | Purpose |
 | --- | --- |
