@@ -1,0 +1,118 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    name: Build and Release
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            artifact_name: docstruct
+            asset_name: docstruct-linux-x86_64
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            artifact_name: docstruct
+            asset_name: docstruct-linux-x86_64-musl
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            artifact_name: docstruct
+            asset_name: docstruct-macos-x86_64
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            artifact_name: docstruct
+            asset_name: docstruct-macos-aarch64
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install dependencies (Ubuntu)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            tesseract-ocr \
+            tesseract-ocr-kor \
+            poppler-utils \
+            python3 \
+            python3-pip \
+            python3-venv
+
+      - name: Install dependencies (macOS)
+        if: matrix.os == 'macos-latest'
+        run: |
+          brew install tesseract tesseract-lang poppler python@3.12
+
+      - name: Install Python dependencies
+        run: |
+          python3 -m venv venv
+          source venv/bin/activate || . venv/Scripts/activate
+          pip install -r requirements.txt
+
+      - name: Build release binary
+        run: |
+          cargo build --release --target ${{ matrix.target }}
+
+      - name: Strip binary (Linux/macOS)
+        if: matrix.os != 'windows-latest'
+        run: |
+          strip target/${{ matrix.target }}/release/${{ matrix.artifact_name }}
+
+      - name: Create tarball
+        run: |
+          cd target/${{ matrix.target }}/release
+          tar czf ${{ matrix.asset_name }}.tar.gz ${{ matrix.artifact_name }}
+          mv ${{ matrix.asset_name }}.tar.gz ../../../
+
+      - name: Upload binary to release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ${{ matrix.asset_name }}.tar.gz
+          body: |
+            ## Installation
+
+            Download the appropriate binary for your platform:
+            - Linux x86_64 (glibc): `docstruct-linux-x86_64.tar.gz`
+            - Linux x86_64 (musl): `docstruct-linux-x86_64-musl.tar.gz`
+            - macOS Intel: `docstruct-macos-x86_64.tar.gz`
+            - macOS Apple Silicon: `docstruct-macos-aarch64.tar.gz`
+
+            Extract and run:
+            ```bash
+            tar xzf docstruct-*.tar.gz
+            ./docstruct --help
+            ```
+
+            ## Dependencies
+
+            Runtime dependencies:
+            - `tesseract` (with Korean language pack)
+            - `poppler-utils` (pdfinfo, pdftotext, pdftoppm)
+            - Python 3.12+ with packages from `requirements.txt`
+
+            ## Usage
+
+            ```bash
+            # Convert a single PDF
+            docstruct convert input.pdf -o output_dir
+
+            # Batch convert
+            docstruct batch *.pdf -o output_dir
+
+            # Show version info
+            docstruct info
+            ```
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
