@@ -1,5 +1,5 @@
-<p align="center">
-  <img src="./assets/docstruct_logo.png" alt="DocStruct 로고" width="220" />
+<p align="left">
+  <img src="./assets/doc_logo.png" alt="DocStruct 로고" width="220" />
 </p>
 
 # DocStruct (한국어 문서)

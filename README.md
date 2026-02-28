@@ -1,5 +1,5 @@
-<p align="center">
-  <img src="./docs/assets/docstruct_logo.png" alt="DocStruct logo" width="220" />
+<p align="left">
+  <img src="./docs/assets/doc_logo.png" alt="DocStruct logo" width="220" />
 </p>
 
 # DocStruct
