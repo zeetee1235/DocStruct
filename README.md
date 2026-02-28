@@ -113,7 +113,28 @@ pip install --user 'pix2tex[gui]>=0.1.2'
 
 ## Usage
 
-### 1) Docker (Recommended)
+### 1) Pre-built Binaries (Quickest)
+
+Download the latest release for your platform from [Releases](https://github.com/zeetee1235/DocStruct/releases):
+
+- **Linux x86_64 (glibc)**: `docstruct-linux-x86_64.tar.gz`
+- **Linux x86_64 (musl)**: `docstruct-linux-x86_64-musl.tar.gz` (static, no libc dependency)
+- **macOS Intel**: `docstruct-macos-x86_64.tar.gz`
+- **macOS Apple Silicon**: `docstruct-macos-aarch64.tar.gz`
+
+Extract and run:
+
+```bash
+tar xzf docstruct-*.tar.gz
+./docstruct convert input.pdf -o output_dir --debug
+```
+
+**Runtime dependencies** (must be installed):
+- `poppler-utils` (pdftotext, pdftoppm, pdfinfo)
+- `tesseract` with language data (e.g., `eng`, `kor`)
+- Python 3.8+ with `pytesseract` and `Pillow`
+
+### 2) Docker (Recommended for Isolation)
 
 Build image:
 
@@ -141,7 +162,7 @@ Optional: include pix2tex in image build (larger image, slower build):
 docker build --build-arg INSTALL_PIX2TEX=1 -t docstruct:latest .
 ```
 
-### 2) Nix (Local)
+### 3) Nix (Local Development)
 
 Nix Flakes:
 
