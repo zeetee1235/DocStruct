@@ -10,16 +10,13 @@ jobs:
     name: Build and Release
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             artifact_name: docstruct
             asset_name: docstruct-linux-x86_64
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-musl
-            artifact_name: docstruct
-            asset_name: docstruct-linux-x86_64-musl
           - os: macos-latest
             target: x86_64-apple-darwin
             artifact_name: docstruct
@@ -55,10 +52,13 @@ jobs:
         run: |
           brew install tesseract tesseract-lang poppler python@3.12
 
-      - name: Install Python dependencies
+      - name: Setup Python virtual environment
         run: |
           python3 -m venv venv
-          source venv/bin/activate || . venv/Scripts/activate
+          
+      - name: Install Python dependencies
+        run: |
+          source venv/bin/activate
           pip install -r requirements.txt
 
       - name: Build release binary
@@ -84,10 +84,9 @@ jobs:
             ## Installation
 
             Download the appropriate binary for your platform:
-            - Linux x86_64 (glibc): `docstruct-linux-x86_64.tar.gz`
-            - Linux x86_64 (musl): `docstruct-linux-x86_64-musl.tar.gz`
-            - macOS Intel: `docstruct-macos-x86_64.tar.gz`
-            - macOS Apple Silicon: `docstruct-macos-aarch64.tar.gz`
+            - **Linux x86_64**: `docstruct-linux-x86_64.tar.gz`
+            - **macOS Intel**: `docstruct-macos-x86_64.tar.gz`
+            - **macOS Apple Silicon**: `docstruct-macos-aarch64.tar.gz`
 
             Extract and run:
             ```bash
@@ -98,21 +97,24 @@ jobs:
             ## Dependencies
 
             Runtime dependencies:
-            - `tesseract` (with Korean language pack)
+            - `tesseract` (with language packs: eng, kor, etc.)
             - `poppler-utils` (pdfinfo, pdftotext, pdftoppm)
-            - Python 3.12+ with packages from `requirements.txt`
+            - Python 3.8+ with packages from `requirements.txt`
 
             ## Usage
 
             ```bash
             # Convert a single PDF
-            docstruct convert input.pdf -o output_dir
+            ./docstruct convert input.pdf -o output_dir
+
+            # With debug output
+            ./docstruct convert input.pdf -o output_dir --debug
 
             # Batch convert
-            docstruct batch *.pdf -o output_dir
+            ./docstruct batch *.pdf -o output_dir
 
-            # Show version info
-            docstruct info
+            # Show PDF info
+            ./docstruct info input.pdf
             ```
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

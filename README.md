@@ -117,8 +117,7 @@ pip install --user 'pix2tex[gui]>=0.1.2'
 
 Download the latest release for your platform from [Releases](https://github.com/zeetee1235/DocStruct/releases):
 
-- **Linux x86_64 (glibc)**: `docstruct-linux-x86_64.tar.gz`
-- **Linux x86_64 (musl)**: `docstruct-linux-x86_64-musl.tar.gz` (static, no libc dependency)
+- **Linux x86_64**: `docstruct-linux-x86_64.tar.gz`
 - **macOS Intel**: `docstruct-macos-x86_64.tar.gz`
 - **macOS Apple Silicon**: `docstruct-macos-aarch64.tar.gz`
 
