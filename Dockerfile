@@ -19,6 +19,7 @@ RUN apt-get update \
         ca-certificates \
         python3 \
         python3-pip \
+        python3-venv \
         tesseract-ocr \
         tesseract-ocr-kor \
         poppler-utils \
@@ -27,9 +28,11 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt /tmp/requirements.txt
+RUN python3 -m venv /opt/venv
+ENV PATH="/opt/venv/bin:${PATH}"
 RUN sed -i '/^pix2tex\[gui\].*/d' /tmp/requirements.txt \
-    && python3 -m pip install --no-cache-dir -r /tmp/requirements.txt \
-    && if [ "$INSTALL_PIX2TEX" = "1" ]; then python3 -m pip install --no-cache-dir 'pix2tex[gui]>=0.1.2'; fi
+    && pip install --no-cache-dir -r /tmp/requirements.txt \
+    && if [ "$INSTALL_PIX2TEX" = "1" ]; then pip install --no-cache-dir 'pix2tex[gui]>=0.1.2'; fi
 
 COPY --from=builder /app/target/release/docstruct /usr/local/bin/docstruct
 COPY ocr ./ocr
