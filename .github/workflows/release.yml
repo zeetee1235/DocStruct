@@ -87,36 +87,37 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Update release notes
-        uses: softprops/action-gh-release@v2
-        with:
-          body: |
-            ## Installation
+        run: |
+          cat > RELEASE_NOTES.md <<'NOTES'
+          ## Installation
 
-            Download the appropriate binary for your platform:
-            - **Linux x86_64**: `docstruct-linux-x86_64.tar.gz`
-            - **macOS Intel**: `docstruct-macos-x86_64.tar.gz`
-            - **macOS Apple Silicon**: `docstruct-macos-aarch64.tar.gz`
+          Download the appropriate binary for your platform:
+          - **Linux x86_64**: `docstruct-linux-x86_64.tar.gz`
+          - **macOS Intel**: `docstruct-macos-x86_64.tar.gz`
+          - **macOS Apple Silicon**: `docstruct-macos-aarch64.tar.gz`
 
-            Extract and run:
-            ```bash
-            tar xzf docstruct-*.tar.gz
-            ./docstruct --help
-            ```
+          Extract and run:
+          ```bash
+          tar xzf docstruct-*.tar.gz
+          ./docstruct --help
+          ```
 
-            ## Dependencies
+          ## Dependencies
 
-            Runtime dependencies:
-            - `tesseract` (with language packs: eng, kor, etc.)
-            - `poppler-utils` (pdfinfo, pdftotext, pdftoppm)
-            - Python 3.8+ with packages from `requirements.txt`
+          Runtime dependencies:
+          - `tesseract` (with language packs: eng, kor, etc.)
+          - `poppler-utils` (pdfinfo, pdftotext, pdftoppm)
+          - Python 3.8+ with packages from `requirements.txt`
 
-            ## Usage
+          ## Usage
 
-            ```bash
-            ./docstruct convert input.pdf -o output_dir
-            ./docstruct convert input.pdf -o output_dir --debug
-            ./docstruct batch *.pdf -o output_dir
-            ./docstruct info input.pdf
-            ```
+          ```bash
+          ./docstruct convert input.pdf -o output_dir
+          ./docstruct convert input.pdf -o output_dir --debug
+          ./docstruct batch *.pdf -o output_dir
+          ./docstruct info input.pdf
+          ```
+          NOTES
+          gh release edit "${GITHUB_REF_NAME}" --notes-file RELEASE_NOTES.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
