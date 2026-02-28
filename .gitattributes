@@ -40,11 +40,19 @@ docker-entrypoint.sh text eol=lf linguist-language=Shell
 *.gz binary
 *.zip binary
 
+# Config and meta files
+.dockerignore linguist-language=Ignore-List
+.gitignore linguist-language=Ignore-List
+.envrc linguist-language=direnv
+requirements.txt linguist-language=Pip-Requirements
+
 # Exclude from language statistics
 test/** linguist-vendored
 tests/fixtures/** linguist-vendored
+tests/fixtures/*.out linguist-generated
 target/** linguist-generated
 __pycache__/** linguist-generated
 docs/** linguist-documentation
 *.lock linguist-generated
+flake.lock linguist-generated
 Cargo.lock linguist-generated
