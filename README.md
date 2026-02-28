@@ -4,6 +4,8 @@
 
 # DocStruct
 
+![Build](https://img.shields.io/github/actions/workflow/status/zeetee1235/DocStruct/ci.yml?branch=main&style=for-the-badge)
+![Last Commit](https://img.shields.io/github/last-commit/zeetee1235/DocStruct?style=for-the-badge)
 ![License: MIT](https://img.shields.io/badge/License-MIT-1f2937?style=for-the-badge)
 
 DocStruct is currently a PDF-first document structure recovery tool that combines parser extraction, OCR extraction, and a fusion layer to produce reliable structured outputs.
