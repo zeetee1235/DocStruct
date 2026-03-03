@@ -1,51 +1,53 @@
-use anyhow::Result;
-use std::path::Path;
+use anyhow::{Context, Result};
+use std::path::PathBuf;
 
-use crate::core::model::{Block, Line, PageHypothesis, Provenance, Span};
-use crate::parser::text_extractor::extract_glyph_runs;
+use crate::parser::docx_parser::DocxParser;
+use crate::parser::pdf_parser::PdfParser;
+use crate::parser::pptx_parser::PptxParser;
 use crate::parser::ParserTrack;
 
-#[derive(Debug, Default)]
-pub struct ParserLayoutBuilder;
+pub struct ParserLayoutBuilder {
+    parser: Box<dyn ParserTrack>,
+}
 
 impl ParserLayoutBuilder {
-    pub fn new() -> Self {
-        Self
+    pub fn new(path: PathBuf) -> Result<Self> {
+        let ext = path
+            .extension()
+            .and_then(|s| s.to_str())
+            .unwrap_or_default()
+            .to_ascii_lowercase();
+
+        let parser: Box<dyn ParserTrack> = match ext.as_str() {
+            "pdf" => Box::new(PdfParser::new(path)),
+            "docx" => Box::new(DocxParser::new(path)?),
+            "pptx" => Box::new(PptxParser::new(path)?),
+            "ppt" => Box::new(PptxParser::from_ppt(path)?),
+            _ => {
+                anyhow::bail!("unsupported input format: .{ext}. supported: pdf, docx, ppt, pptx")
+            }
+        };
+
+        Ok(Self { parser })
     }
 }
 
 impl ParserTrack for ParserLayoutBuilder {
-    fn analyze_page(&self, pdf_path: &Path, page_idx: usize) -> Result<PageHypothesis> {
-        let glyph_runs = extract_glyph_runs(pdf_path, page_idx);
-        let mut blocks = Vec::new();
+    fn page_count(&self) -> Result<usize> {
+        self.parser.page_count().context("failed to count pages")
+    }
 
-        if !glyph_runs.is_empty() {
-            let mut spans = Vec::new();
-            let mut bbox = glyph_runs[0].bbox;
-            for run in glyph_runs {
-                bbox = bbox.union(&run.bbox);
-                spans.push(Span {
-                    text: run.text,
-                    bbox: run.bbox,
-                    source: Provenance::Parser,
-                    style: None,
-                });
-            }
-            let line = Line { spans };
-            blocks.push(Block::TextBlock {
-                bbox,
-                lines: vec![line],
-                confidence: 0.6,
-                source: Provenance::Parser,
-                debug: None,
-            });
-        }
+    fn analyze_page(&self, page_idx: usize) -> Result<crate::core::model::PageHypothesis> {
+        self.parser
+            .analyze_page(page_idx)
+            .with_context(|| format!("parser failed on page {}", page_idx + 1))
+    }
 
-        Ok(PageHypothesis {
-            page_idx,
-            blocks,
-            width: 1000,
-            height: 1400,
-        })
+    fn supports_ocr_rendering(&self) -> bool {
+        self.parser.supports_ocr_rendering()
+    }
+
+    fn rendering_source_path(&self) -> Option<&std::path::Path> {
+        self.parser.rendering_source_path()
     }
 }

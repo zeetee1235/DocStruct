@@ -7,7 +7,7 @@ use docstruct::pipeline::{build_document, export_document, PipelineConfig};
 
 #[derive(Parser, Debug)]
 #[command(name = "docstruct")]
-#[command(version, about = "PDF document structure recovery using parser-OCR cross-validation", long_about = None)]
+#[command(version, about = "Document structure recovery (PDF/DOCX/PPT/PPTX) using parser-OCR cross-validation", long_about = None)]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -15,9 +15,9 @@ struct Cli {
 
 #[derive(Subcommand, Debug)]
 enum Commands {
-    /// Convert a PDF file to structured format
+    /// Convert a document file to structured format
     Convert {
-        /// Input PDF file path
+        /// Input document path (pdf/docx/ppt/pptx)
         input: PathBuf,
 
         /// Output directory (default: ./<input_name>_output)
@@ -41,7 +41,7 @@ enum Commands {
         quiet: bool,
     },
 
-    /// Convert multiple PDF files
+    /// Convert multiple document files
     Batch {
         /// Input PDF files or glob pattern
         inputs: Vec<PathBuf>,
@@ -63,9 +63,9 @@ enum Commands {
         debug: bool,
     },
 
-    /// Show information about a PDF file
+    /// Show information about a document file
     Info {
-        /// Input PDF file path
+        /// Input document path (pdf/docx/ppt/pptx)
         input: PathBuf,
     },
 }
@@ -136,7 +136,7 @@ fn convert_single(
     }
 
     let document = build_document(&config)
-        .with_context(|| format!("Failed to process PDF: {}", input.display()))?;
+        .with_context(|| format!("Failed to process document: {}", input.display()))?;
 
     if !quiet {
         println!("[+] Exporting results...");
@@ -218,21 +218,21 @@ fn convert_batch(
 }
 
 fn show_info(input: PathBuf) -> Result<()> {
-    use docstruct::parser::pdf_reader::PdfReader;
+    use docstruct::parser::{layout_builder::ParserLayoutBuilder, ParserTrack};
 
     if !input.exists() {
         anyhow::bail!("Input file does not exist: {}", input.display());
     }
 
-    let reader = PdfReader::new(input.clone())
-        .with_context(|| format!("Failed to open PDF: {}", input.display()))?;
+    let parser = ParserLayoutBuilder::new(input.clone())
+        .with_context(|| format!("Failed to open document: {}", input.display()))?;
 
-    let page_count = reader.page_count()?;
+    let page_count = parser.page_count()?;
 
-    println!("PDF Information");
+    println!("Document Information");
     println!("===============");
     println!("File: {}", input.display());
-    println!("Pages: {}", page_count);
+    println!("Pages/Slides: {}", page_count);
 
     Ok(())
 }

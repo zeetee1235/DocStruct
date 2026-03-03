@@ -20,14 +20,22 @@ jobs:
             target: x86_64-unknown-linux-gnu
             artifact_name: docstruct
             asset_name: docstruct-linux-x86_64
+            archive_ext: tar.gz
           - os: macos-latest
             target: x86_64-apple-darwin
             artifact_name: docstruct
             asset_name: docstruct-macos-x86_64
+            archive_ext: tar.gz
           - os: macos-latest
             target: aarch64-apple-darwin
             artifact_name: docstruct
             asset_name: docstruct-macos-aarch64
+            archive_ext: tar.gz
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            artifact_name: docstruct.exe
+            asset_name: docstruct-windows-x86_64
+            archive_ext: zip
 
     steps:
       - name: Checkout code
@@ -42,25 +50,60 @@ jobs:
         run: cargo build --release --target ${{ matrix.target }}
 
       - name: Strip binary (Linux/macOS)
+        if: runner.os != 'Windows'
         run: strip target/${{ matrix.target }}/release/${{ matrix.artifact_name }}
 
-      - name: Create tarball
+      - name: Create tarball (Linux/macOS)
+        if: runner.os != 'Windows'
         run: |
           cd target/${{ matrix.target }}/release
           tar czf ${{ matrix.asset_name }}.tar.gz ${{ matrix.artifact_name }}
           mv ${{ matrix.asset_name }}.tar.gz "$GITHUB_WORKSPACE/"
 
+      - name: Create zip (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Compress-Archive -Path "target/${{ matrix.target }}/release/${{ matrix.artifact_name }}" -DestinationPath "${{ matrix.asset_name }}.zip"
+
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.asset_name }}
-          path: ${{ matrix.asset_name }}.tar.gz
+          path: ${{ matrix.asset_name }}.${{ matrix.archive_ext }}
+          if-no-files-found: error
+
+  build-rpm:
+    name: Build RPM (x86_64)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install cargo-generate-rpm
+        run: cargo install cargo-generate-rpm
+
+      - name: Build release binary
+        run: cargo build --release
+
+      - name: Build RPM
+        run: cargo generate-rpm --target x86_64
+
+      - name: Upload RPM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: docstruct-rpm-x86_64
+          path: target/generate-rpm/*.rpm
           if-no-files-found: error
 
   publish:
     name: Publish Release
     runs-on: ubuntu-latest
-    needs: build
+    needs: [build, build-rpm]
 
     steps:
       - name: Checkout code
@@ -77,12 +120,18 @@ jobs:
         run: |
           ls -lah release-assets
           test -n "$(ls -1 release-assets/*.tar.gz 2>/dev/null)"
+          test -n "$(ls -1 release-assets/*.zip 2>/dev/null)"
+          test -n "$(ls -1 release-assets/*.rpm 2>/dev/null)"
 
       - name: Upload binaries to release
         run: |
           gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1 || \
             gh release create "${GITHUB_REF_NAME}" --title "${GITHUB_REF_NAME}" --notes ""
-          gh release upload "${GITHUB_REF_NAME}" release-assets/*.tar.gz --clobber
+          gh release upload "${GITHUB_REF_NAME}" \
+            release-assets/*.tar.gz \
+            release-assets/*.zip \
+            release-assets/*.rpm \
+            --clobber
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -95,6 +144,8 @@ jobs:
           - **Linux x86_64**: `docstruct-linux-x86_64.tar.gz`
           - **macOS Intel**: `docstruct-macos-x86_64.tar.gz`
           - **macOS Apple Silicon**: `docstruct-macos-aarch64.tar.gz`
+          - **Windows x86_64**: `docstruct-windows-x86_64.zip`
+          - **RPM package (x86_64)**: `docstruct-*.x86_64.rpm`
 
           Extract and run:
           ```bash
@@ -102,20 +153,34 @@ jobs:
           ./docstruct --help
           ```
 
+          Windows:
+          ```powershell
+          Expand-Archive .\docstruct-windows-x86_64.zip
+          .\docstruct.exe --help
+          ```
+
+          RPM:
+          ```bash
+          sudo rpm -ivh docstruct-*.x86_64.rpm
+          docstruct --help
+          ```
+
           ## Dependencies
 
           Runtime dependencies:
           - `tesseract` (with language packs: eng, kor, etc.)
           - `poppler-utils` (pdfinfo, pdftotext, pdftoppm)
+          - `soffice` (LibreOffice, required for `.ppt` conversion)
           - Python 3.8+ with packages from `requirements.txt`
 
           ## Usage
 
           ```bash
           ./docstruct convert input.pdf -o output_dir
-          ./docstruct convert input.pdf -o output_dir --debug
-          ./docstruct batch *.pdf -o output_dir
-          ./docstruct info input.pdf
+          ./docstruct convert input.docx -o output_dir
+          ./docstruct convert input.pptx -o output_dir
+          ./docstruct convert input.ppt -o output_dir
+          ./docstruct info input.pptx
           ```
           NOTES
           gh release edit "${GITHUB_REF_NAME}" --notes-file RELEASE_NOTES.md
