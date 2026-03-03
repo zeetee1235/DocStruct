@@ -18,6 +18,7 @@ struct SlideRun {
 #[derive(Debug)]
 pub struct PptxParser {
     slides: Vec<Vec<SlideRun>>,
+    render_pdf_path: PathBuf,
     _temp_dir: Option<PathBuf>,
 }
 
@@ -58,6 +59,41 @@ impl PptxParser {
     }
 
     fn from_path(path: PathBuf, temp_dir: Option<PathBuf>) -> Result<Self> {
+        let working_dir = if let Some(dir) = temp_dir {
+            dir
+        } else {
+            let now = SystemTime::now().duration_since(UNIX_EPOCH)?.as_millis();
+            let dir = std::env::temp_dir().join(format!("docstruct-pptx-{now}"));
+            fs::create_dir_all(&dir)?;
+            dir
+        };
+
+        let pdf_status = Command::new("soffice")
+            .arg("--headless")
+            .arg("--convert-to")
+            .arg("pdf")
+            .arg(&path)
+            .arg("--outdir")
+            .arg(&working_dir)
+            .status()
+            .with_context(|| "failed to invoke soffice for PPTX->PDF conversion")?;
+
+        if !pdf_status.success() {
+            anyhow::bail!("soffice failed to convert PPTX to PDF with status: {pdf_status}");
+        }
+
+        let stem = path
+            .file_stem()
+            .ok_or_else(|| anyhow::anyhow!("invalid PPTX file name"))?
+            .to_string_lossy();
+        let render_pdf_path = working_dir.join(format!("{stem}.pdf"));
+        if !render_pdf_path.exists() {
+            anyhow::bail!(
+                "converted PPTX PDF file not found: {}",
+                render_pdf_path.display()
+            );
+        }
+
         let script = r#"
 import json, re, sys, zipfile, xml.etree.ElementTree as ET
 path = sys.argv[1]
@@ -72,7 +108,7 @@ with zipfile.ZipFile(path) as z:
     sh = float(sld.attrib.get('cy', '6858000')) if sld is not None else 6858000.0
     sx = 1000.0 / max(sw, 1.0)
     sy = 1400.0 / max(sh, 1.0)
-    slides = sorted([n for n in z.namelist() if n.startswith('ppt/slides/slide') and n.endswith('.xml')], key=lambda n:int(re.search(r'slide(\\d+)\\.xml$', n).group(1)))
+    slides = sorted([n for n in z.namelist() if n.startswith('ppt/slides/slide') and n.endswith('.xml')], key=lambda n:int(re.search(r'slide(\d+)\.xml$', n).group(1)))
     out=[]
     for sn in slides:
         root = ET.fromstring(z.read(sn))
@@ -111,7 +147,8 @@ print(json.dumps(out, ensure_ascii=False))
 
         Ok(Self {
             slides,
-            _temp_dir: temp_dir,
+            render_pdf_path,
+            _temp_dir: Some(working_dir),
         })
     }
 }
@@ -152,10 +189,10 @@ impl ParserTrack for PptxParser {
     }
 
     fn supports_ocr_rendering(&self) -> bool {
-        false
+        true
     }
 
     fn rendering_source_path(&self) -> Option<&Path> {
-        None
+        Some(&self.render_pdf_path)
     }
 }

@@ -1,6 +1,9 @@
 use anyhow::{Context, Result};
+use std::fs;
+use std::path::Path;
 use std::path::PathBuf;
 use std::process::Command;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::core::geometry::BBox;
 use crate::core::model::{Block, Line, PageHypothesis, Provenance, Span};
@@ -9,10 +12,16 @@ use crate::parser::ParserTrack;
 #[derive(Debug, Clone)]
 pub struct DocxParser {
     text: String,
+    render_pdf_path: PathBuf,
+    _temp_dir: PathBuf,
 }
 
 impl DocxParser {
     pub fn new(path: PathBuf) -> Result<Self> {
+        let now = SystemTime::now().duration_since(UNIX_EPOCH)?.as_millis();
+        let temp_dir = std::env::temp_dir().join(format!("docstruct-docx-{now}"));
+        fs::create_dir_all(&temp_dir)?;
+
         let script = r#"
 import sys, zipfile, xml.etree.ElementTree as ET
 path = sys.argv[1]
@@ -42,8 +51,36 @@ print('\n'.join(paras))
             );
         }
 
+        let status = Command::new("soffice")
+            .arg("--headless")
+            .arg("--convert-to")
+            .arg("pdf")
+            .arg(&path)
+            .arg("--outdir")
+            .arg(&temp_dir)
+            .status()
+            .with_context(|| "failed to invoke soffice for DOCX->PDF conversion")?;
+
+        if !status.success() {
+            anyhow::bail!("soffice failed to convert DOCX to PDF with status: {status}");
+        }
+
+        let stem = path
+            .file_stem()
+            .ok_or_else(|| anyhow::anyhow!("invalid DOCX file name"))?
+            .to_string_lossy();
+        let render_pdf_path = temp_dir.join(format!("{stem}.pdf"));
+        if !render_pdf_path.exists() {
+            anyhow::bail!(
+                "converted DOCX PDF file not found: {}",
+                render_pdf_path.display()
+            );
+        }
+
         Ok(Self {
             text: String::from_utf8_lossy(&output.stdout).trim().to_string(),
+            render_pdf_path,
+            _temp_dir: temp_dir,
         })
     }
 }
@@ -83,10 +120,10 @@ impl ParserTrack for DocxParser {
     }
 
     fn supports_ocr_rendering(&self) -> bool {
-        false
+        true
     }
 
-    fn rendering_source_path(&self) -> Option<&std::path::Path> {
-        None
+    fn rendering_source_path(&self) -> Option<&Path> {
+        Some(&self.render_pdf_path)
     }
 }
