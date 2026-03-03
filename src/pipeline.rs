@@ -12,7 +12,7 @@ use crate::fusion::{FusionEngine, SimpleFusionEngine};
 use crate::ocr::{
     bridge::OcrBridge, layout_builder::OcrLayoutBuilder, renderer::PageRenderer, OcrTrack,
 };
-use crate::parser::{layout_builder::ParserLayoutBuilder, pdf_reader::PdfReader, ParserTrack};
+use crate::parser::{layout_builder::ParserLayoutBuilder, ParserTrack};
 
 #[derive(Debug, Clone)]
 pub struct PipelineConfig {
@@ -28,11 +28,10 @@ impl PipelineConfig {
 }
 
 pub fn build_document(config: &PipelineConfig) -> Result<DocumentFinal> {
-    let pdf_reader = PdfReader::new(config.input.clone())?;
-    let page_count = pdf_reader.page_count()?;
+    let parser_track = ParserLayoutBuilder::new(config.input.clone())?;
+    let page_count = parser_track.page_count()?;
 
     let renderer = PageRenderer::new(config.output.join("debug"), config.dpi);
-    let parser_track = ParserLayoutBuilder::new();
     let bridge = OcrBridge::new(config.output.join("ocr"));
     let ocr_track = OcrLayoutBuilder::new(bridge);
     let fusion = SimpleFusionEngine::new();
@@ -40,9 +39,23 @@ pub fn build_document(config: &PipelineConfig) -> Result<DocumentFinal> {
     let mut pages: Vec<PageFinal> = Vec::with_capacity(page_count);
 
     for page_idx in 0..page_count {
-        let rendered = renderer.render_page(&config.input, page_idx)?;
-        let parser_hypo = parser_track.analyze_page(&config.input, page_idx)?;
-        let ocr_hypo = ocr_track.analyze_page(&rendered.path, page_idx)?;
+        let parser_hypo = parser_track.analyze_page(page_idx)?;
+        let ocr_hypo = if parser_track.supports_ocr_rendering() {
+            let rendered = renderer.render_page(
+                parser_track
+                    .rendering_source_path()
+                    .ok_or_else(|| anyhow::anyhow!("missing rendering source path"))?,
+                page_idx,
+            )?;
+            ocr_track.analyze_page(&rendered.path, page_idx)?
+        } else {
+            PageHypothesis {
+                page_idx,
+                blocks: vec![],
+                width: 1000,
+                height: 1400,
+            }
+        };
         let mut fused = fusion.fuse(&parser_hypo, &ocr_hypo)?;
         attach_debug_info(&mut fused, &parser_hypo, &ocr_hypo);
         pages.push(fused);

@@ -14,7 +14,14 @@ use docstruct::ocr::bridge::OcrBridge;
 use docstruct::ocr::layout_builder::OcrLayoutBuilder;
 use docstruct::ocr::{OcrTrack, PageRenderer};
 use docstruct::parser::layout_builder::ParserLayoutBuilder;
-use docstruct::parser::{ParserTrack, PdfReader};
+use docstruct::parser::ParserTrack;
+
+fn has_command(cmd: &str) -> bool {
+    std::process::Command::new(cmd)
+        .arg("--version")
+        .output()
+        .is_ok()
+}
 
 /// Unit test: Verify basic fusion logic with synthetic data
 #[test]
@@ -108,7 +115,11 @@ fn test_fusion_with_synthetic_data() -> Result<()> {
 /// Integration test: Process real test_document.pdf with parser-only pipeline
 #[test]
 fn test_parser_pipeline_with_test_document() -> Result<()> {
-    let test_pdf = PathBuf::from("test/test_document.pdf");
+    if !has_command("pdfinfo") {
+        eprintln!("Skipping test: pdfinfo not available");
+        return Ok(());
+    }
+    let test_pdf = PathBuf::from("tests/fixtures/test_document.pdf");
 
     // Skip if test PDF doesn't exist (CI environment)
     if !test_pdf.exists() {
@@ -116,8 +127,8 @@ fn test_parser_pipeline_with_test_document() -> Result<()> {
         return Ok(());
     }
 
-    let pdf_reader = PdfReader::new(test_pdf.clone())?;
-    let page_count = pdf_reader.page_count()?;
+    let parser_track = ParserLayoutBuilder::new(test_pdf.clone())?;
+    let page_count = parser_track.page_count()?;
 
     // Should have at least 1 page
     assert!(
@@ -125,10 +136,8 @@ fn test_parser_pipeline_with_test_document() -> Result<()> {
         "test_document.pdf should have at least one page"
     );
 
-    let parser_track = ParserLayoutBuilder::new();
-
     // Test first page parsing
-    let page_hypo = parser_track.analyze_page(&test_pdf, 0)?;
+    let page_hypo = parser_track.analyze_page(0)?;
 
     assert_eq!(page_hypo.page_idx, 0);
     assert!(page_hypo.width > 0);
@@ -175,11 +184,10 @@ fn test_full_pipeline_with_test_document() -> Result<()> {
     out.push(format!("docstruct-integration-{}", now));
     fs::create_dir_all(&out)?;
 
-    let pdf_reader = PdfReader::new(test_pdf.clone())?;
-    let _page_count = pdf_reader.page_count()?;
+    let parser_track = ParserLayoutBuilder::new(test_pdf.clone())?;
+    let _page_count = parser_track.page_count()?;
 
     let renderer = PageRenderer::new(out.join("debug"), 200);
-    let parser_track = ParserLayoutBuilder::new();
     let bridge = OcrBridge::new(out.join("ocr"));
     let ocr_track = OcrLayoutBuilder::new(bridge);
     let fusion = SimpleFusionEngine::new();
@@ -189,7 +197,7 @@ fn test_full_pipeline_with_test_document() -> Result<()> {
     // Process first page only for fast testing
     let page_idx = 0;
     let rendered = renderer.render_page(&test_pdf, page_idx)?;
-    let parser_hypo = parser_track.analyze_page(&test_pdf, page_idx)?;
+    let parser_hypo = parser_track.analyze_page(page_idx)?;
     let ocr_hypo = ocr_track.analyze_page(&rendered.path, page_idx)?;
 
     let mut fused = fusion.fuse(&parser_hypo, &ocr_hypo)?;
@@ -234,6 +242,10 @@ fn test_full_pipeline_with_test_document() -> Result<()> {
 /// Integration test: Verify korean_test.pdf can be opened and has pages
 #[test]
 fn test_korean_pdf_opens() -> Result<()> {
+    if !has_command("pdfinfo") {
+        eprintln!("Skipping test: pdfinfo not available");
+        return Ok(());
+    }
     let korean_pdf = PathBuf::from("tests/fixtures/korean_test.pdf");
 
     if !korean_pdf.exists() {
@@ -241,16 +253,15 @@ fn test_korean_pdf_opens() -> Result<()> {
         return Ok(());
     }
 
-    let pdf_reader = PdfReader::new(korean_pdf.clone())?;
-    let page_count = pdf_reader.page_count()?;
+    let parser_track = ParserLayoutBuilder::new(korean_pdf.clone())?;
+    let page_count = parser_track.page_count()?;
 
     assert!(
         page_count > 0,
         "korean_test.pdf should have at least one page"
     );
 
-    let parser_track = ParserLayoutBuilder::new();
-    let page_hypo = parser_track.analyze_page(&korean_pdf, 0)?;
+    let page_hypo = parser_track.analyze_page(0)?;
 
     assert_eq!(page_hypo.page_idx, 0);
 
