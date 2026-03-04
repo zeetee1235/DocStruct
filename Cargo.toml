@@ -2,6 +2,8 @@
 name = "docstruct"
 version = "0.1.0"
 edition = "2021"
+license = "MIT"
+description = "A tool for recovering document structure through Parser + OCR + Fusion pipeline"
 
 [dependencies]
 anyhow = "1"
@@ -16,3 +18,12 @@ unicode-normalization = "0.1"
 
 [dev-dependencies]
 pretty_assertions = "1"
+
+[package.metadata.generate-rpm]
+assets = [
+  { source = "target/release/docstruct", dest = "/usr/bin/docstruct", mode = "755" },
+]
+[package.metadata.generate-rpm.requires]
+tesseract = "*"
+poppler-utils = "*"
+python3 = "*"
