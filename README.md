@@ -4,118 +4,120 @@
 
 # DocStruct
 
-![Build](https://img.shields.io/github/actions/workflow/status/zeetee1235/DocStruct/ci.yml?branch=main&style=for-the-badge)
-![Docker Image](https://img.shields.io/github/actions/workflow/status/zeetee1235/DocStruct/docker-image.yml?style=for-the-badge&label=Docker%20Image)
-![Last Commit](https://img.shields.io/github/last-commit/zeetee1235/DocStruct?style=for-the-badge)
-![License: MIT](https://img.shields.io/badge/License-MIT-1f2937?style=for-the-badge)
+DocStruct is a tool designed to recover document structure through a pipeline consisting of parsing, optical character recognition (OCR), and fusion processes. The tool supports structured output formats for various document types.
 
-DocStruct recovers document structure using a Parser + OCR + Fusion pipeline and exports structured outputs.
+Supported input formats include: **PDF, DOCX, PPT, PPTX**
 
-Supported input formats: **PDF, DOCX, PPT, PPTX**
+For documentation in Korean, refer to [docs/README.ko.md](./docs/README.ko.md).
 
-Korean documentation: [docs/README.ko.md](./docs/README.ko.md)
+## Graphical User Interface (GUI)
 
-## GUI Snapshot
+A snapshot of the GUI is provided below:
 
 <img src="./docs/assets/gui.png" alt="DocStruct GUI" width="100%" />
 
 ## Quick Start (GUI)
 
-Run:
+To launch the GUI, execute the following command:
 
 ```bash
 ./run-gui
 ```
 
-What `run-gui` does:
-- creates/uses `.venv`
-- installs Python packages from `requirements.txt`
-- launches the Tauri desktop app
+The `run-gui` script performs the following tasks:
+- Creates or utilizes a virtual environment (`.venv`)
+- Installs the required Python packages from `requirements.txt`
+- Launches the Tauri desktop application
 
-In the app:
-1. Select one or more input files
-2. Optionally select an output directory
-3. Set DPI (default `200`)
-4. Click **Convert**
+Within the application:
+1. Select one or more input files.
+2. Optionally specify an output directory.
+3. Adjust the DPI setting (default: `200`).
+4. Click the **Convert** button.
 
-If output directory is empty, conversion still runs and extracted text is shown in-app.
-Use **Copy Text** to copy results to clipboard.
+If no output directory is specified, the conversion process will still execute, and the extracted text will be displayed within the application. The **Copy Text** feature allows users to copy the results to the clipboard.
 
 ## Installation Requirements
 
-Required runtime tools:
+The following runtime tools are required:
 - Rust toolchain (`cargo`)
-- Python 3.8+
-- `tesseract` (with language packs such as `eng`, `kor`)
-- `poppler-utils` (`pdfinfo`, `pdftotext`, `pdftoppm`)
+- Python 3.8 or later
+- `tesseract` (including language packs such as `eng` and `kor`)
+- `poppler-utils` (e.g., `pdfinfo`, `pdftotext`, `pdftoppm`)
 
-Linux GUI build/runtime notes:
+For Linux GUI builds and runtime:
 - WebKitGTK packages
-- Wayland dev/runtime packages (`wayland-client.pc` provider)
+- Wayland development/runtime packages (e.g., `wayland-client.pc` provider)
 
-Optional (math OCR):
+Optional dependency for mathematical OCR:
 
 ```bash
 pip install --user 'pix2tex[gui]>=0.1.2'
 ```
 
-## CLI Usage (Linux-focused)
+## Download and Use
 
-Build:
+The latest binary files for various platforms can be downloaded from the [Releases](https://github.com/zeetee1235/DocStruct/releases) section. After downloading the appropriate file, extract its contents and follow the instructions provided in the accompanying documentation.
+
+## Command-Line Interface (CLI)
+
+### Build
 
 ```bash
 cargo build --release
 ```
 
-Convert one file:
+### Convert a Single File
 
 ```bash
 ./target/release/docstruct convert input.pdf -o output_dir --debug
 ```
 
-Convert multiple files:
+### Convert Multiple Files
 
 ```bash
 ./target/release/docstruct batch file1.pdf file2.pdf -o output_dir --debug
 ```
 
-Inspect file info:
+### Inspect File Information
 
 ```bash
 ./target/release/docstruct info input.pdf
 ```
 
-Useful options:
-- `--dpi <int>`: OCR rendering DPI (default `200`)
-- `--debug`: write debug artifacts
-- `--quiet`: reduce console logs
+### Additional Options
+
+- `--dpi <int>`: Specifies the OCR rendering DPI (default: `200`).
+- `--debug`: Enables the generation of debug artifacts.
+- `--quiet`: Reduces the verbosity of console logs.
 
 ## Release Policy
 
-Tag push `v*` publishes assets to GitHub Releases.
+Releases are managed through Git tags prefixed with `v*`, which trigger workflows to publish assets to GitHub Releases.
 
 - **Windows/macOS**: Desktop GUI installers (Tauri)
 - **Linux**:
-  - CLI binaries/packages
+  - Command-line interface binaries and packages
   - GUI packages (`.deb`, `.rpm`)
 
-Workflows:
+Relevant workflows:
 - [`.github/workflows/release.yml`](./.github/workflows/release.yml): Linux CLI release
 - [`.github/workflows/gui-release.yml`](./.github/workflows/gui-release.yml): GUI release (Windows/macOS/Linux GUI)
 
-## Build GUI Installers Locally
+## Building GUI Installers Locally
+
+To build GUI installers locally, execute the following script:
 
 ```bash
 ./scripts/build-gui-app.sh
 ```
 
-Outputs are generated under:
+The generated outputs are located under:
 - `gui/src-tauri/target/release/bundle/`
 
-On Linux, the script builds `deb` and `rpm` by default.
+On Linux, the script generates `.deb` and `.rpm` packages by default.
 
-
-## Pipeline
+## Pipeline Overview
 
 ```mermaid
 flowchart LR
@@ -143,8 +145,9 @@ flowchart LR
     F --> G4[Debug HTML]
 ```
 
-
 ## Output Layout
+
+The output directory structure is as follows:
 
 ```text
 output_dir/
@@ -162,11 +165,13 @@ output_dir/
 
 ## Development
 
+To build and test the project, use the following commands:
+
 ```bash
 cargo build
 cargo test
 cargo test parser::hangul
 ```
 
-Architecture: [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)  
-Contributing: [CONTRIBUTING.md](./CONTRIBUTING.md)
+For additional architectural details, refer to [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md). For contribution guidelines, see [CONTRIBUTING.md](./CONTRIBUTING.md).
+
