@@ -70,8 +70,8 @@ jobs:
       - name: Setup Python (Linux/macOS)
         if: runner.os != 'Windows'
         run: |
-          python3 -m pip install --upgrade pip || true
-          pip3 install -r requirements.txt || true
+          python3 -m pip install --upgrade pip --break-system-packages || true
+          pip3 install -r requirements.txt --break-system-packages || true
 
       - name: Setup Python (Windows)
         if: runner.os == 'Windows'
