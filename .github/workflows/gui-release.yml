@@ -115,6 +115,9 @@ jobs:
     needs: build-gui
 
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Download GUI artifacts
         uses: actions/download-artifact@v4
         with:
