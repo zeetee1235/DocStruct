@@ -9,48 +9,111 @@
 ![Last Commit](https://img.shields.io/github/last-commit/zeetee1235/DocStruct?style=for-the-badge)
 ![License: MIT](https://img.shields.io/badge/License-MIT-1f2937?style=for-the-badge)
 
-DocStruct is currently a PDF-first document structure recovery tool that combines parser extraction, OCR extraction, and a fusion layer to produce reliable structured outputs.
+DocStruct recovers document structure using a Parser + OCR + Fusion pipeline and exports structured outputs.
 
-Current scope: PDF only.  
-Planned next formats: DOCX and PPT/PPTX.
+Supported input formats: **PDF, DOCX, PPT, PPTX**
 
 Korean documentation: [docs/README.ko.md](./docs/README.ko.md)
 
-## Overview
+## GUI Snapshot
 
-| Track | Role |
-| --- | --- |
-| Parser | Extract text and layout from PDF internals |
-| OCR | Render pages and detect blocks/text from images |
-| Fusion | Align parser/OCR outputs with confidence and provenance |
+<img src="./docs/assets/gui.png" alt="DocStruct GUI" width="100%" />
 
-## Snapshot
+## Quick Start (GUI)
+
+Run:
 
 ```bash
-./target/debug/docstruct convert tests/fixtures/test_document.pdf -o output_en --debug
+./run-gui
 ```
 
-<table>
-  <tr>
-    <th width="33%">PDF Page 1</th>
-    <th width="33%">PDF Page 2</th>
-    <th width="33%">PDF Page 3</th>
-  </tr>
-  <tr>
-    <td><img src="./docs/assets/readme-input-page1.png" alt="Input PDF page 1" width="100%" /></td>
-    <td><img src="./docs/assets/readme-input-page2.png" alt="Input PDF page 2" width="100%" /></td>
-    <td><img src="./docs/assets/readme-input-page3.png" alt="Input PDF page 3" width="100%" /></td>
-  </tr>
-</table>
+What `run-gui` does:
+- creates/uses `.venv`
+- installs Python packages from `requirements.txt`
+- launches the Tauri desktop app
 
-### Output Artifacts
+In the app:
+1. Select one or more input files
+2. Optionally select an output directory
+3. Set DPI (default `200`)
+4. Click **Convert**
 
-- `document.json`
-- `document.md`
-- `document.txt`
-- `page_XXX.md` / `page_XXX.txt`
-- `figures/*.png`
-- `debug/*.html`
+If output directory is empty, conversion still runs and extracted text is shown in-app.
+Use **Copy Text** to copy results to clipboard.
+
+## Installation Requirements
+
+Required runtime tools:
+- Rust toolchain (`cargo`)
+- Python 3.8+
+- `tesseract` (with language packs such as `eng`, `kor`)
+- `poppler-utils` (`pdfinfo`, `pdftotext`, `pdftoppm`)
+
+Linux GUI build/runtime notes:
+- WebKitGTK packages
+- Wayland dev/runtime packages (`wayland-client.pc` provider)
+
+Optional (math OCR):
+
+```bash
+pip install --user 'pix2tex[gui]>=0.1.2'
+```
+
+## CLI Usage (Linux-focused)
+
+Build:
+
+```bash
+cargo build --release
+```
+
+Convert one file:
+
+```bash
+./target/release/docstruct convert input.pdf -o output_dir --debug
+```
+
+Convert multiple files:
+
+```bash
+./target/release/docstruct batch file1.pdf file2.pdf -o output_dir --debug
+```
+
+Inspect file info:
+
+```bash
+./target/release/docstruct info input.pdf
+```
+
+Useful options:
+- `--dpi <int>`: OCR rendering DPI (default `200`)
+- `--debug`: write debug artifacts
+- `--quiet`: reduce console logs
+
+## Release Policy
+
+Tag push `v*` publishes assets to GitHub Releases.
+
+- **Windows/macOS**: Desktop GUI installers (Tauri)
+- **Linux**:
+  - CLI binaries/packages
+  - GUI packages (`.deb`, `.rpm`)
+
+Workflows:
+- [`.github/workflows/release.yml`](./.github/workflows/release.yml): Linux CLI release
+- [`.github/workflows/gui-release.yml`](./.github/workflows/gui-release.yml): GUI release (Windows/macOS/Linux GUI)
+
+## Build GUI Installers Locally
+
+```bash
+./scripts/build-gui-app.sh
+```
+
+Outputs are generated under:
+- `gui/src-tauri/target/release/bundle/`
+
+On Linux, the script builds `deb` and `rpm` by default.
+
 
 ## Pipeline
 
@@ -80,118 +143,6 @@ flowchart LR
     F --> G4[Debug HTML]
 ```
 
-Detailed design: [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)
-
-## Setup
-
-Requirements:
-
-- Rust toolchain
-- Python 3.12+
-- `poppler-utils` (`pdftotext`, `pdftoppm`, `pdfinfo`)
-- `tesseract` with required language data
-
-Nix Flakes:
-
-```bash
-nix develop
-cargo build
-```
-
-Legacy nix-shell:
-
-```bash
-nix-shell
-cargo build
-```
-
-Optional math OCR (pix2tex):
-
-```bash
-pip install --user 'pix2tex[gui]>=0.1.2'
-```
-
-## Usage
-
-### 1) Pre-built Binaries (Quickest)
-
-Download the latest release for your platform from [Releases](https://github.com/zeetee1235/DocStruct/releases):
-
-- **Linux x86_64**: `docstruct-linux-x86_64.tar.gz`
-- **macOS Intel**: `docstruct-macos-x86_64.tar.gz`
-- **macOS Apple Silicon**: `docstruct-macos-aarch64.tar.gz`
-
-Extract and run:
-
-```bash
-tar xzf docstruct-*.tar.gz
-./docstruct convert input.pdf -o output_dir --debug
-```
-
-**Runtime dependencies** (must be installed):
-- `poppler-utils` (pdftotext, pdftoppm, pdfinfo)
-- `tesseract` with language data (e.g., `eng`, `kor`)
-- Python 3.8+ with `pytesseract` and `Pillow`
-
-### 2) Docker (Recommended for Isolation)
-
-Build image:
-
-```bash
-docker build -t docstruct:latest .
-```
-
-Convert PDF:
-
-```bash
-docker run --rm -v "$PWD:/work" -w /work docstruct:latest \
-  convert input.pdf -o output_dir --debug
-```
-
-Inspect PDF info:
-
-```bash
-docker run --rm -v "$PWD:/work" -w /work docstruct:latest \
-  info input.pdf
-```
-
-Optional: include pix2tex in image build (larger image, slower build):
-
-```bash
-docker build --build-arg INSTALL_PIX2TEX=1 -t docstruct:latest .
-```
-
-### 3) Nix (Local Development)
-
-Nix Flakes:
-
-```bash
-nix develop
-cargo build
-./target/debug/docstruct convert input.pdf -o output_dir --debug
-```
-
-Legacy nix-shell:
-
-```bash
-nix-shell
-cargo build
-./target/debug/docstruct convert input.pdf -o output_dir --debug
-```
-
-Common commands:
-
-| Command | Purpose |
-| --- | --- |
-| `./target/debug/docstruct convert input.pdf -o output_dir --debug` | Convert one PDF |
-| `./target/debug/docstruct batch file1.pdf file2.pdf -o output_dir --debug` | Convert multiple PDFs |
-| `./target/debug/docstruct info input.pdf` | Inspect PDF metadata |
-
-Useful flags:
-
-- `--dpi <int>`: render DPI for OCR (default: 200)
-- `--debug`: write debug assets
-- `--quiet`: reduce console logs
 
 ## Output Layout
 
@@ -217,4 +168,5 @@ cargo test
 cargo test parser::hangul
 ```
 
-Contributing guide: [CONTRIBUTING.md](./CONTRIBUTING.md)
+Architecture: [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)  
+Contributing: [CONTRIBUTING.md](./CONTRIBUTING.md)

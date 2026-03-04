@@ -1,5 +1,6 @@
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
+use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -53,14 +54,15 @@ impl OcrBridge {
 
     pub fn run(&self, image_path: &Path) -> Result<Vec<OcrToken>> {
         fs::create_dir_all(&self.work_dir)?;
-        let output = Command::new("python3")
+        let python_cmd = env::var("DOCSTRUCT_PYTHON").unwrap_or_else(|_| "python3".to_string());
+        let output = Command::new(&python_cmd)
             .arg(&self.script_path)
             .arg("--image")
             .arg(image_path)
             .arg("--lang")
             .arg(&self.lang)
             .output()
-            .with_context(|| "failed to invoke python OCR bridge")?;
+            .with_context(|| format!("failed to invoke python OCR bridge using `{python_cmd}`"))?;
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
@@ -68,8 +70,27 @@ impl OcrBridge {
         }
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        let tokens: Vec<OcrToken> =
-            serde_json::from_str(&stdout).with_context(|| "failed to parse OCR JSON response")?;
+        let json_payload = extract_json_payload(&stdout).ok_or_else(|| {
+            anyhow::anyhow!(
+                "failed to find OCR JSON payload in stdout. raw stdout:\n{}",
+                stdout.trim()
+            )
+        })?;
+        let tokens: Vec<OcrToken> = serde_json::from_str(json_payload)
+            .with_context(|| format!("failed to parse OCR JSON response. raw stdout:\n{}", stdout.trim()))?;
         Ok(tokens)
     }
+}
+
+fn extract_json_payload(stdout: &str) -> Option<&str> {
+    let trimmed = stdout.trim();
+    if trimmed.starts_with('[') || trimmed.starts_with('{') {
+        return Some(trimmed);
+    }
+
+    stdout
+        .lines()
+        .rev()
+        .map(str::trim)
+        .find(|line| line.starts_with('[') || line.starts_with('{'))
 }

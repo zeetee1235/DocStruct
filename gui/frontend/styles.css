@@ -1,0 +1,132 @@
+:root {
+  --bg: #2e3440;
+  --surface: #3b4252;
+  --surface-2: #434c5e;
+  --text: #eceff4;
+  --muted: #d8dee9;
+  --accent: #a3be8c;
+  --accent-2: #8fbc8f;
+  --border: #4c566a;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", "Noto Sans KR", sans-serif;
+  color: var(--text);
+  background: radial-gradient(circle at top right, #434c5e 0%, var(--bg) 45%);
+}
+
+.app {
+  max-width: 900px;
+  margin: 40px auto;
+  padding: 0 18px 24px;
+}
+
+.top h1 {
+  margin: 0;
+  font-size: 2rem;
+}
+
+.top p {
+  margin: 8px 0 22px;
+  color: var(--muted);
+}
+
+.panel {
+  background: rgba(59, 66, 82, 0.92);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px;
+  margin-bottom: 16px;
+}
+
+.panel h2 {
+  margin: 0 0 10px;
+  font-size: 1rem;
+}
+
+label {
+  display: block;
+  margin-bottom: 8px;
+  margin-top: 14px;
+  font-weight: 700;
+}
+
+input,
+textarea {
+  width: 100%;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  padding: 10px 12px;
+  font-size: 0.95rem;
+}
+
+input:focus,
+textarea:focus {
+  outline: 2px solid rgba(163, 190, 140, 0.4);
+  border-color: var(--accent);
+}
+
+textarea {
+  resize: vertical;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+}
+
+button {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text);
+  background: var(--surface-2);
+  cursor: pointer;
+}
+
+button:hover {
+  filter: brightness(1.05);
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+button.primary {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: #1f2a20;
+  border-color: transparent;
+}
+
+button.ghost {
+  min-width: 72px;
+}
+
+.actions {
+  margin-top: 16px;
+}
+
+#status {
+  margin: 0;
+  min-height: 96px;
+  white-space: pre-wrap;
+  line-height: 1.45;
+  color: #e5e9f0;
+}
+
+.results-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+}

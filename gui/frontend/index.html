@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DocStruct GUI</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app">
+      <header class="top">
+        <h1>DocStruct GUI</h1>
+        <p>Convert one or more files and view text directly in the app.</p>
+      </header>
+
+      <section class="panel">
+        <label for="inputList">Input Files</label>
+        <div class="row">
+          <textarea id="inputList" rows="4" placeholder="No files selected" readonly></textarea>
+          <button id="pickInput" class="ghost">Browse Files</button>
+        </div>
+
+        <label for="outputDir">Output Folder (Optional)</label>
+        <div class="row">
+          <input id="outputDir" type="text" placeholder="Leave empty to skip file export" />
+          <button id="pickOutput" class="ghost">Browse</button>
+        </div>
+
+        <label for="dpi">DPI</label>
+        <input id="dpi" type="number" min="72" max="600" value="200" />
+
+        <div class="actions">
+          <button id="convertBtn" class="primary">Convert</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Status</h2>
+        <pre id="status">Idle</pre>
+      </section>
+
+      <section class="panel">
+        <h2>Extracted Text</h2>
+        <div class="results-actions">
+          <button id="copyBtn" class="ghost">Copy Text</button>
+        </div>
+        <textarea id="resultText" rows="16" placeholder="Converted text will appear here" readonly></textarea>
+      </section>
+    </main>
+
+    <script src="./app.js"></script>
+  </body>
+</html>

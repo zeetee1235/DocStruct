@@ -21,21 +21,6 @@ jobs:
             artifact_name: docstruct
             asset_name: docstruct-linux-x86_64
             archive_ext: tar.gz
-          - os: macos-latest
-            target: x86_64-apple-darwin
-            artifact_name: docstruct
-            asset_name: docstruct-macos-x86_64
-            archive_ext: tar.gz
-          - os: macos-latest
-            target: aarch64-apple-darwin
-            artifact_name: docstruct
-            asset_name: docstruct-macos-aarch64
-            archive_ext: tar.gz
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
-            artifact_name: docstruct.exe
-            asset_name: docstruct-windows-x86_64
-            archive_ext: zip
 
     steps:
       - name: Checkout code
@@ -49,22 +34,14 @@ jobs:
       - name: Build release binary
         run: cargo build --release --target ${{ matrix.target }}
 
-      - name: Strip binary (Linux/macOS)
-        if: runner.os != 'Windows'
+      - name: Strip binary
         run: strip target/${{ matrix.target }}/release/${{ matrix.artifact_name }}
 
-      - name: Create tarball (Linux/macOS)
-        if: runner.os != 'Windows'
+      - name: Create tarball
         run: |
           cd target/${{ matrix.target }}/release
           tar czf ${{ matrix.asset_name }}.tar.gz ${{ matrix.artifact_name }}
           mv ${{ matrix.asset_name }}.tar.gz "$GITHUB_WORKSPACE/"
-
-      - name: Create zip (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          Compress-Archive -Path "target/${{ matrix.target }}/release/${{ matrix.artifact_name }}" -DestinationPath "${{ matrix.asset_name }}.zip"
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
@@ -120,7 +97,6 @@ jobs:
         run: |
           ls -lah release-assets
           test -n "$(ls -1 release-assets/*.tar.gz 2>/dev/null)"
-          test -n "$(ls -1 release-assets/*.zip 2>/dev/null)"
           test -n "$(ls -1 release-assets/*.rpm 2>/dev/null)"
 
       - name: Upload binaries to release
@@ -129,7 +105,6 @@ jobs:
             gh release create "${GITHUB_REF_NAME}" --title "${GITHUB_REF_NAME}" --notes ""
           gh release upload "${GITHUB_REF_NAME}" \
             release-assets/*.tar.gz \
-            release-assets/*.zip \
             release-assets/*.rpm \
             --clobber
         env:
@@ -140,23 +115,16 @@ jobs:
           cat > RELEASE_NOTES.md <<'NOTES'
           ## Installation
 
-          Download the appropriate binary for your platform:
+          This workflow publishes Linux CLI artifacts:
           - **Linux x86_64**: `docstruct-linux-x86_64.tar.gz`
-          - **macOS Intel**: `docstruct-macos-x86_64.tar.gz`
-          - **macOS Apple Silicon**: `docstruct-macos-aarch64.tar.gz`
-          - **Windows x86_64**: `docstruct-windows-x86_64.zip`
           - **RPM package (x86_64)**: `docstruct-*.x86_64.rpm`
+
+          Desktop GUI installers (Windows/macOS/Linux GUI packages) are published by the separate GUI workflow.
 
           Extract and run:
           ```bash
           tar xzf docstruct-*.tar.gz
           ./docstruct --help
-          ```
-
-          Windows:
-          ```powershell
-          Expand-Archive .\docstruct-windows-x86_64.zip
-          .\docstruct.exe --help
           ```
 
           RPM:
