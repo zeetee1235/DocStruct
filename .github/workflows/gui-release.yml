@@ -23,7 +23,7 @@ jobs:
             os: windows-latest
             artifact_name: docstruct-gui-windows-x64
           - name: macos-intel
-            os: macos-12
+            os: macos-latest
             artifact_name: docstruct-gui-macos-intel
           - name: macos-apple-silicon
             os: macos-14
