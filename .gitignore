@@ -47,6 +47,9 @@ result-*
 # Test outputs
 *_output/
 batch_output/
+ 
+# Test output directory
+test_output_twocolumn/
 
 # OCR working directories
 ocr_work/
