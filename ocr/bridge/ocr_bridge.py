@@ -464,6 +464,48 @@ def classify_block_type(roi: np.ndarray, text: str) -> str:
     return "text"
 
 
+def extract_text_with_conf(roi: np.ndarray, lang: str, psm: int) -> tuple[str, float]:
+    """Extract OCR text and mean confidence for one ROI/config pair."""
+    data = pytesseract.image_to_data(
+        roi,
+        lang=lang,
+        config=f"--psm {psm} --oem 1",
+        output_type=Output.DICT,
+    )
+    tokens = []
+    confs = []
+    n = len(data.get("text", []))
+    for i in range(n):
+        text = (data["text"][i] or "").strip()
+        if not text:
+            continue
+        try:
+            conf = float(data["conf"][i])
+        except (ValueError, TypeError):
+            continue
+        if conf < 0:
+            continue
+        tokens.append(text)
+        confs.append(conf)
+
+    joined = " ".join(tokens).strip()
+    mean_conf = float(sum(confs) / len(confs)) if confs else 0.0
+    return joined, mean_conf
+
+
+def ocr_candidate_score(text: str, conf_0_to_100: float) -> float:
+    """Heuristic quality score for choosing best OCR candidate."""
+    norm = normalize_ocr_text(text)
+    if not norm:
+        return -1.0
+    conf = max(0.0, min(100.0, conf_0_to_100)) / 100.0
+    length = min(len(norm), 180) / 180.0
+    alnum_or_korean = len(re.findall(r"[A-Za-z0-9가-힣]", norm))
+    alpha_ratio = alnum_or_korean / max(1, len(norm))
+    noise_penalty = 0.35 if is_probably_noise_text(norm) else 0.0
+    return conf * 0.52 + length * 0.28 + alpha_ratio * 0.20 - noise_penalty
+
+
 def run_ocr(image_path: Path, lang: str = "eng") -> list[dict]:
     """Run block-wise OCR with type classification.
 
@@ -483,23 +525,39 @@ def run_ocr(image_path: Path, lang: str = "eng") -> list[dict]:
     for block in blocks:
         x, y, w, h = block["x"], block["y"], block["w"], block["h"]
         roi = img[y:y+h, x:x+w]
-        
-        # Run regular OCR with specified language
-        # PSM 6: Assume a single uniform block of text
-        # For better Korean support, add OEM 1 (LSTM neural net mode)
-        config = '--psm 6 --oem 1'
-        text = pytesseract.image_to_string(roi, lang=lang, config=config).strip()
-        
-        # Combine separated Hangul jamos
-        text = combine_hangul_jamos(text)
-        
+
+        if roi.size == 0:
+            continue
+
+        # Multi-pass OCR for higher recall/precision:
+        # - original ROI
+        # - grayscale ROI
+        # - Otsu-thresholded ROI
+        # with both PSM 6 (block) and PSM 11 (sparse text).
+        roi_gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY) if len(roi.shape) == 3 else roi
+        _, roi_bin = cv2.threshold(roi_gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        variants = [roi, roi_gray, roi_bin]
+        psm_modes = [6, 11]
+        best_text = ""
+        best_conf = 0.0
+        best_score = -1.0
+        for variant in variants:
+            for psm in psm_modes:
+                cand_text, cand_conf = extract_text_with_conf(variant, lang=lang, psm=psm)
+                score = ocr_candidate_score(cand_text, cand_conf)
+                if score > best_score:
+                    best_score = score
+                    best_text = cand_text
+                    best_conf = cand_conf
+
+        text = normalize_ocr_text(best_text)
         block_type = classify_block_type(roi, text)
-        
+
         result = {
             "text": text,
             "bbox": [float(x), float(y), float(x + w), float(y + h)],
             "block_type": block_type,
-            "confidence": 0.55,
+            "confidence": max(0.05, min(1.0, best_conf / 100.0)),
         }
         
         # For math blocks, try LaTeX OCR

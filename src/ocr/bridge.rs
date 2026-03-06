@@ -76,8 +76,12 @@ impl OcrBridge {
                 stdout.trim()
             )
         })?;
-        let tokens: Vec<OcrToken> = serde_json::from_str(json_payload)
-            .with_context(|| format!("failed to parse OCR JSON response. raw stdout:\n{}", stdout.trim()))?;
+        let tokens: Vec<OcrToken> = serde_json::from_str(json_payload).with_context(|| {
+            format!(
+                "failed to parse OCR JSON response. raw stdout:\n{}",
+                stdout.trim()
+            )
+        })?;
         Ok(tokens)
     }
 }

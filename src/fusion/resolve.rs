@@ -12,31 +12,42 @@ pub fn resolve_blocks(alignment: &AlignmentResult, page_class: PageClass) -> Vec
 
     // Count OCR blocks to detect multi-column layouts
     let ocr_block_count = alignment.unmatched_b.len();
-    
+
     for block in &alignment.unmatched_a {
         // Skip oversized parser blocks when there are many OCR blocks (likely multi-column)
         // Check if this is a full-page parser block (common in PDF text extraction)
         let bbox = block.bbox();
-        let is_full_page = bbox.x0.abs() < 10.0 && bbox.y0.abs() < 10.0 
-            && (bbox.x1 - 1000.0).abs() < 10.0 && (bbox.y1 - 1400.0).abs() < 10.0;
-        
-        if is_full_page && ocr_block_count >= 10 {
+        let parser_text = block.text_content().unwrap_or_default();
+        let parser_korean_reliable =
+            has_korean_chars(&parser_text) && korean_text_quality(&parser_text) >= 4;
+        let is_full_page = bbox.x0.abs() < 10.0
+            && bbox.y0.abs() < 10.0
+            && (bbox.x1 - 1000.0).abs() < 10.0
+            && (bbox.y1 - 1400.0).abs() < 10.0;
+
+        if is_full_page && ocr_block_count >= 10 && !parser_korean_reliable {
             // Skip this full-page parser block in favor of OCR blocks
-            eprintln!("[DEBUG] Skipping full-page parser block ({} OCR blocks)", ocr_block_count);
+            eprintln!(
+                "[DEBUG] Skipping full-page parser block ({} OCR blocks)",
+                ocr_block_count
+            );
             continue;
         }
-        
+
         // Also check area-based criterion
         let block_area = bbox.width() * bbox.height();
         let page_area = 1000.0 * 1400.0;
         let is_oversized = block_area / page_area > 0.7;
-        
-        if is_oversized && ocr_block_count >= 10 {
-            eprintln!("[DEBUG] Skipping oversized parser block (area={:.1}%, {} OCR blocks)", 
-                     block_area / page_area * 100.0, ocr_block_count);
+
+        if is_oversized && ocr_block_count >= 10 && !parser_korean_reliable {
+            eprintln!(
+                "[DEBUG] Skipping oversized parser block (area={:.1}%, {} OCR blocks)",
+                block_area / page_area * 100.0,
+                ocr_block_count
+            );
             continue;
         }
-        
+
         blocks.push(promote_single(
             block.clone(),
             Provenance::Parser,
@@ -49,7 +60,7 @@ pub fn resolve_blocks(alignment: &AlignmentResult, page_class: PageClass) -> Vec
     }
 
     let blocks = filter_degraded_parser_blocks(blocks);
-    match page_class {
+    let resolved = match page_class {
         PageClass::Digital => {
             let blocks = filter_redundant_ocr_text_blocks(blocks);
             let blocks = filter_low_quality_ocr_text_blocks(blocks, true);
@@ -63,7 +74,9 @@ pub fn resolve_blocks(alignment: &AlignmentResult, page_class: PageClass) -> Vec
             filter_ocr_text_when_parser_reliable(blocks, page_class)
         }
         PageClass::Scanned => filter_low_quality_ocr_text_blocks(blocks, false),
-    }
+    };
+
+    sort_blocks_in_reading_order(resolved)
 }
 
 fn promote_single(block: Block, provenance: Provenance, page_class: PageClass) -> Block {
@@ -159,17 +172,26 @@ fn resolve_pair(pair: &MatchedPair, page_class: PageClass) -> Block {
     let parser_bbox = pair.a.bbox();
     let parser_area = parser_bbox.width() * parser_bbox.height();
     let page_area = 1000.0 * 1400.0;
-    let parser_is_oversized = parser_area / page_area > 0.7;
-    
+    let parser_is_oversized = parser_area / page_area > 0.58;
+
     // If parser block is oversized and similarity is low, prefer OCR
     if parser_is_oversized {
+        let parser_quality = a_text
+            .as_deref()
+            .map(korean_text_quality)
+            .unwrap_or(i32::MIN);
+        let korean_present = a_text.as_deref().map(has_korean_chars).unwrap_or(false)
+            || b_text.as_deref().map(has_korean_chars).unwrap_or(false);
         let sim = match (&a_text, &b_text) {
             (Some(a), Some(b)) => text_similarity(a, b),
             _ => 0.0,
         };
-        if sim < 0.15 {
+        if sim < 0.15 && !(korean_present && parser_quality >= 4) {
             // Very low similarity + oversized parser = prefer OCR for better layout
-            eprintln!("[DEBUG] Oversized parser block with low similarity ({:.3}), preferring OCR", sim);
+            eprintln!(
+                "[DEBUG] Oversized parser block with low similarity ({:.3}), preferring OCR",
+                sim
+            );
             return promote_single(pair.b.clone(), Provenance::Ocr, page_class);
         }
     }
@@ -204,6 +226,15 @@ fn resolve_pair(pair: &MatchedPair, page_class: PageClass) -> Block {
             let (final_lines, provenance) = if sim >= 0.72 {
                 if page_class == PageClass::Scanned {
                     (ocr_lines.clone(), Provenance::Fused)
+                } else if page_class == PageClass::Hybrid
+                    && parser_is_oversized
+                    && ocr_len + 40 >= parser_len
+                    && !(korean_present && parser_quality >= 4)
+                    && !ocr_text.trim().is_empty()
+                {
+                    // Oversized parser blocks usually lose layout semantics
+                    // (multi-column, tables, equations). Keep OCR ordering.
+                    (ocr_lines.clone(), Provenance::Ocr)
                 } else {
                     (parser_lines.clone(), Provenance::Fused)
                 }
@@ -216,6 +247,13 @@ fn resolve_pair(pair: &MatchedPair, page_class: PageClass) -> Block {
                             && ocr_len > parser_len + 40
                         {
                             (ocr_lines.clone(), Provenance::Ocr)
+                        } else if parser_is_oversized
+                            && sim < 0.55
+                            && ocr_len + 40 >= parser_len
+                            && !(korean_present && parser_quality >= 4)
+                            && !is_noisy_ocr_text(ocr_text)
+                        {
+                            (ocr_lines.clone(), Provenance::Ocr)
                         } else {
                             (parser_lines.clone(), Provenance::Parser)
                         }
@@ -225,6 +263,11 @@ fn resolve_pair(pair: &MatchedPair, page_class: PageClass) -> Block {
                             && sim < 0.30
                             && ocr_quality > parser_quality + 4
                             && ocr_len > parser_len + 50)
+                            || (parser_is_oversized
+                                && sim < 0.55
+                                && ocr_len + 40 >= parser_len
+                                && !(korean_present && parser_quality >= 4)
+                                && !is_noisy_ocr_text(ocr_text))
                             || (sim < 0.35
                                 && ocr_len > parser_len + 80
                                 && !is_noisy_ocr_text(ocr_text))
@@ -553,15 +596,17 @@ fn parser_reliable_for_accuracy(blocks: &[Block]) -> bool {
 
     let ocr_text_blocks = blocks
         .iter()
-        .filter(|block| matches!(
-            block,
-            Block::TextBlock {
-                source: Provenance::Ocr,
-                ..
-            }
-        ))
+        .filter(|block| {
+            matches!(
+                block,
+                Block::TextBlock {
+                    source: Provenance::Ocr,
+                    ..
+                }
+            )
+        })
         .count();
-    
+
     let ocr_chars = blocks
         .iter()
         .filter_map(|block| match block {
@@ -576,8 +621,14 @@ fn parser_reliable_for_accuracy(blocks: &[Block]) -> bool {
     // If parser has only 1 large block but OCR has many small blocks (10+),
     // it's likely a multi-column layout where parser's reading order is wrong.
     // Prefer OCR in this case.
-    if parser_text_blocks == 1 && ocr_text_blocks >= 10 {
-        return false;
+    if parser_text_blocks == 1
+        && ocr_text_blocks >= 6
+        && detect_two_column_divider(blocks).is_some()
+    {
+        // Keep parser for Korean-heavy pages where parser text quality is strong.
+        if parser_korean_quality < 4 {
+            return false;
+        }
     }
 
     parser_chars >= 220
@@ -664,6 +715,129 @@ fn normalize_text_for_compare(text: &str) -> String {
         .collect::<Vec<_>>()
         .join(" ")
         .to_lowercase()
+}
+
+fn sort_blocks_in_reading_order(mut blocks: Vec<Block>) -> Vec<Block> {
+    if blocks.len() <= 2 {
+        return blocks;
+    }
+
+    let maybe_divider = detect_two_column_divider(&blocks);
+    if let Some(divider_x) = maybe_divider {
+        let mut left = Vec::new();
+        let mut right = Vec::new();
+        let mut spanning = Vec::new();
+
+        for block in blocks {
+            let bbox = block.bbox();
+            if bbox.x0 < divider_x && bbox.x1 > divider_x {
+                spanning.push(block);
+                continue;
+            }
+            let cx = (bbox.x0 + bbox.x1) * 0.5;
+            if cx < divider_x {
+                left.push(block);
+            } else {
+                right.push(block);
+            }
+        }
+
+        left.sort_by(|a, b| block_yx_order(a, b));
+        right.sort_by(|a, b| block_yx_order(a, b));
+        spanning.sort_by(|a, b| block_yx_order(a, b));
+
+        let min_column_y = left
+            .iter()
+            .chain(right.iter())
+            .map(|b| b.bbox().y0)
+            .fold(f32::MAX, f32::min);
+        let max_column_y = left
+            .iter()
+            .chain(right.iter())
+            .map(|b| b.bbox().y1)
+            .fold(0.0_f32, f32::max);
+
+        let mut top_spanning = Vec::new();
+        let mut mid_spanning = Vec::new();
+        let mut bottom_spanning = Vec::new();
+        for block in spanning {
+            let bbox = block.bbox();
+            if bbox.y1 <= min_column_y + 50.0 {
+                top_spanning.push(block);
+            } else if bbox.y0 >= max_column_y - 30.0 {
+                bottom_spanning.push(block);
+            } else {
+                mid_spanning.push(block);
+            }
+        }
+
+        let mut out = Vec::new();
+        out.extend(top_spanning);
+        out.extend(left);
+        out.extend(right);
+        out.extend(mid_spanning);
+        out.extend(bottom_spanning);
+        out
+    } else {
+        blocks.sort_by(|a, b| block_yx_order(a, b));
+        blocks
+    }
+}
+
+fn block_yx_order(a: &Block, b: &Block) -> std::cmp::Ordering {
+    let ab = a.bbox();
+    let bb = b.bbox();
+    ab.y0
+        .partial_cmp(&bb.y0)
+        .unwrap_or(std::cmp::Ordering::Equal)
+        .then_with(|| {
+            ab.x0
+                .partial_cmp(&bb.x0)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        })
+}
+
+fn detect_two_column_divider(blocks: &[Block]) -> Option<f32> {
+    if blocks.len() < 6 {
+        return None;
+    }
+
+    let min_x = blocks.iter().map(|b| b.bbox().x0).fold(f32::MAX, f32::min);
+    let max_x = blocks.iter().map(|b| b.bbox().x1).fold(0.0_f32, f32::max);
+    let page_width = (max_x - min_x).max(1.0);
+    if page_width < 300.0 {
+        return None;
+    }
+
+    let divider = min_x + page_width * 0.5;
+    let mut left_count = 0usize;
+    let mut right_count = 0usize;
+    let mut spanning_count = 0usize;
+
+    for block in blocks {
+        let bbox = block.bbox();
+        let cx = (bbox.x0 + bbox.x1) * 0.5;
+        let spans_divider = bbox.x0 < divider && bbox.x1 > divider;
+        let width_ratio = bbox.width() / page_width;
+        if spans_divider && width_ratio > 0.58 {
+            spanning_count += 1;
+            continue;
+        }
+        if cx < divider {
+            left_count += 1;
+        } else {
+            right_count += 1;
+        }
+    }
+
+    if left_count >= 2 && right_count >= 2 && left_count + right_count >= 5 {
+        let spanning_ratio = spanning_count as f32 / (blocks.len() as f32);
+        if spanning_ratio <= 0.45 {
+            return Some(divider);
+        }
+    }
+
+    None
 }
 
 #[cfg(test)]
