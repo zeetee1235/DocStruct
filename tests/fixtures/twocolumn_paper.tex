@@ -1,0 +1,150 @@
+\documentclass[10pt,twocolumn]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{amsmath, amssymb}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{lipsum}
+
+\geometry{
+    a4paper,
+    margin=1in,
+    columnsep=0.25in
+}
+
+\title{\textbf{Two-Column Layout Test}\\\large Testing Column Detection and Reading Order}
+\author{DocStruct Project}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+This document uses a standard two-column layout to test the OCR pipeline's ability to detect multiple columns and preserve correct reading order. The text should flow from the top of the left column to the bottom, then continue at the top of the right column. Mathematical equations, lists, and regular text are included to test various content types.
+\end{abstract}
+
+\section{Introduction}
+
+Academic papers frequently use two-column layouts to maximize information density while maintaining readability. This presents a challenge for OCR systems, which must correctly identify column boundaries and extract text in the proper reading order.
+
+The goal of this test document is to verify that the OCR pipeline can:
+\begin{enumerate}
+\item Detect that the page has multiple columns
+\item Separate blocks into left and right columns
+\item Read the left column from top to bottom
+\item Then read the right column from top to bottom
+\end{enumerate}
+
+Failure to handle column layout correctly results in text that alternates between columns, producing an unreadable output like: "line 1 left, line 1 right, line 2 left, line 2 right" instead of the correct "line 1 left, line 2 left, ..., line 1 right, line 2 right."
+
+\section{Mathematical Content}
+
+Mathematical notation is common in scientific papers. Inline math like $E = mc^2$ and $\alpha + \beta = \gamma$ should be recognized correctly within each column.
+
+Display equations should also be handled properly:
+\begin{equation}
+\int_{-\infty}^{\infty} e^{-x^2} dx = \sqrt{\pi}
+\end{equation}
+
+\begin{equation}
+\nabla \times \vec{B} = \mu_0 \left(\vec{J} + \varepsilon_0 \frac{\partial \vec{E}}{\partial t}\right)
+\end{equation}
+
+The Fourier transform is defined as:
+\begin{equation}
+\hat{f}(\omega) = \int_{-\infty}^{\infty} f(t) e^{-i\omega t} dt
+\end{equation}
+
+\section{Lists and Enumeration}
+
+Unordered lists in columns:
+\begin{itemize}
+\item First item in left column
+\item Second item with more text to test line wrapping
+\item Third item with inline math $x^2 + y^2 = r^2$
+\item Fourth item
+\end{itemize}
+
+Ordered lists should maintain numbering:
+\begin{enumerate}
+\item Initial step
+\item Processing phase
+\item Validation stage
+\item Final output generation
+\end{enumerate}
+
+\section{Korean Text Test}
+
+Two-column layouts are also used in Korean academic papers. This section tests Korean text processing in a multi-column environment.
+
+한국어 텍스트도 2단 레이아웃에서 올바르게 처리되어야 합니다. 왼쪽 단의 텍스트를 먼저 읽고, 그 다음 오른쪽 단의 텍스트를 읽어야 합니다.
+
+컬럼 감지가 실패하면 텍스트가 좌우로 번갈아 나타나서 읽을 수 없게 됩니다. 예를 들어, "왼쪽 첫줄, 오른쪽 첫줄, 왼쪽 둘째줄, 오른쪽 둘째줄" 같은 순서로 출력되면 안 됩니다.
+
+올바른 순서는 왼쪽 단을 완전히 읽은 후에 오른쪽 단을 읽는 것입니다.
+
+\section{Matrix and Symbols}
+
+Matrices should be preserved:
+\begin{equation}
+\mathbf{A} = \begin{pmatrix}
+a_{11} & a_{12} & a_{13} \\
+a_{21} & a_{22} & a_{23} \\
+a_{31} & a_{32} & a_{33}
+\end{pmatrix}
+\end{equation}
+
+Common symbols: $\alpha, \beta, \gamma, \delta, \epsilon, \lambda, \mu, \sigma, \pi, \omega$. 
+
+Greek letters and mathematical operators should be recognized: $\nabla, \partial, \int, \sum, \prod, \infty, \forall, \exists$.
+
+\section{Algorithms and Logic}
+
+Logical expressions are common:
+\begin{equation}
+(P \land Q) \implies R \equiv (\neg P \lor \neg Q \lor R)
+\end{equation}
+
+Set theory notation:
+\begin{equation}
+A \cup B = \{x \mid x \in A \lor x \in B\}
+\end{equation}
+
+\begin{equation}
+A \cap B = \{x \mid x \in A \land x \in B\}
+\end{equation}
+
+\section{Long Paragraph Test}
+
+This section contains longer paragraphs to test how well the OCR handles continuous text across multiple lines within a single column. The text should flow naturally without breaks or misorderings. Column detection should ensure that this paragraph stays in its own column and doesn't get mixed with text from the adjacent column. 
+
+Word spacing and line breaks are important factors. The system should preserve natural reading flow and not introduce artificial breaks or concatenate words incorrectly. Hyphenation at line ends, if present, should be handled appropriately.
+
+\section{Conclusion}
+
+This two-column test document provides a comprehensive check for column detection and reading order in the DocStruct OCR pipeline. Successful processing will produce output that reads naturally from left column to right column, with all content types (text, math, Korean text, lists) properly handled.
+
+The expected reading order is:
+\begin{enumerate}
+\item All content from left column (top to bottom)
+\item All content from right column (top to bottom)
+\end{enumerate}
+
+Any deviation from this order indicates a problem with the column detection or block sorting algorithm.
+
+\section{References}
+
+Academic papers typically end with references. In a two-column layout, references should also flow correctly:
+
+\begin{enumerate}
+\item[{[1]}] Author A. "Paper Title in Left Column". Conference 2024.
+\item[{[2]}] Author B. "Another Paper Title". Journal 2025.
+\item[{[3]}] Author C. "Research Topic". Workshop 2023.
+\item[{[4]}] Author D. "Column Detection Methods". Symposium 2026.
+\end{enumerate}
+
+\end{document}

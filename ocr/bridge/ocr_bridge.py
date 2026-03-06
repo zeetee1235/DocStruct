@@ -172,11 +172,15 @@ def is_probably_noise_text(text: str) -> bool:
 
 
 def merge_adjacent_text_blocks(tokens: list[dict]) -> list[dict]:
-    """Merge nearby text blocks into line-like segments to reduce fragmentation."""
+    """Merge nearby text blocks into line-like segments to reduce fragmentation.
+    
+    IMPORTANT: Preserves input order - assumes tokens are already sorted in reading order.
+    """
     text_blocks = [t for t in tokens if t.get("block_type") == "text"]
     other_blocks = [t for t in tokens if t.get("block_type") != "text"]
 
-    text_blocks.sort(key=lambda t: (t["bbox"][1], t["bbox"][0]))
+    # Don't resort! Preserve the reading order from column detection
+    # text_blocks.sort(key=lambda t: (t["bbox"][1], t["bbox"][0]))  # REMOVED
     merged = []
 
     for tok in text_blocks:
@@ -206,7 +210,12 @@ def merge_adjacent_text_blocks(tokens: list[dict]) -> list[dict]:
 
         same_line = abs(a_cy - b_cy) <= max(8.0, 0.45 * max(ah, bh))
         horizontal_gap = bx0 - ax1
-        close_horizontally = horizontal_gap <= max(24.0, 1.1 * max(ah, bh))
+        
+        # Don't merge blocks that are too far apart (likely different columns)
+        # For multi-column layouts, typical column gap is 40-100px at 200 DPI
+        # Use conservative threshold to avoid merging across columns
+        max_merge_distance = min(max(24.0, 1.1 * max(ah, bh)), 80.0)
+        close_horizontally = 0 <= horizontal_gap <= max_merge_distance
 
         # Merge if two OCR snippets likely belong to the same visual line.
         if same_line and close_horizontally:
@@ -283,8 +292,86 @@ def detect_blocks(image_path: Path, min_area: int = 2000, merge_kernel: tuple = 
             continue
         blocks.append({"x": x, "y": y, "w": w, "h": h})
     
-    blocks.sort(key=lambda b: (b["y"], b["x"]))
+    blocks = sort_blocks_by_reading_order(blocks)
     return blocks
+
+
+def detect_column_layout(blocks: list[dict]) -> tuple[bool, float]:
+    """Detect if blocks are in multi-column layout.
+    
+    Returns:
+        (is_multi_column, divider_x): True if 2+ columns detected, and x-coordinate dividing them
+    """
+    if len(blocks) < 4:
+        return False, 0.0
+    
+    # Calculate page width from rightmost block
+    page_width = max(b["x"] + b["w"] for b in blocks)
+    if page_width < 100:
+        return False, 0.0
+    
+    # Try middle divider
+    middle_x = page_width / 2.0
+    
+    # Count blocks in left and right halves based on their center
+    left_blocks = [b for b in blocks if (b["x"] + b["w"] / 2) < middle_x]
+    right_blocks = [b for b in blocks if (b["x"] + b["w"] / 2) >= middle_x]
+    
+    # For column detection, ignore blocks that span across the middle (titles, headers)
+    # A block is considered "spanning" if it extends significantly beyond its column's expected range
+    left_column_max = page_width * 0.45  # Left column should end around 45% of page width
+    right_column_min = page_width * 0.55  # Right column should start around 55% of page width
+    
+    # Filter blocks that stay within their column boundaries
+    left_blocks_in_column = [b for b in left_blocks if b["x"] + b["w"] < left_column_max + 50]
+    right_blocks_in_column = [b for b in right_blocks if b["x"] > right_column_min - 50]
+    
+    # Need at least 2 blocks in each column
+    if len(left_blocks_in_column) < 2 or len(right_blocks_in_column) < 2:
+        return False, 0.0
+    
+    # Check if there's a clear separation between columns
+    left_edges = [b["x"] + b["w"] for b in left_blocks_in_column]
+    right_edges = [b["x"] for b in right_blocks_in_column]
+    
+    if left_edges and right_edges:
+        max_left_edge = max(left_edges)
+        min_right_edge = min(right_edges)
+        gap = min_right_edge - max_left_edge
+        
+        # If there's a gap (or small overlap) and enough blocks in each column, it's multi-column
+        if gap > -20 and len(left_blocks_in_column) >= 2 and len(right_blocks_in_column) >= 2:
+            return True, middle_x
+    
+    return False, 0.0
+
+
+def sort_blocks_by_reading_order(blocks: list[dict]) -> list[dict]:
+    """Sort blocks in natural reading order, handling multi-column layouts.
+    
+    For single-column: top to bottom
+    For multi-column: left column top to bottom, then right column top to bottom
+    """
+    if not blocks:
+        return blocks
+    
+    is_multi_column, divider_x = detect_column_layout(blocks)
+    
+    if is_multi_column:
+        # Separate into columns
+        left_column = [b for b in blocks if (b["x"] + b["w"] / 2) < divider_x]
+        right_column = [b for b in blocks if (b["x"] + b["w"] / 2) >= divider_x]
+        
+        # Sort each column by y, then x
+        left_column.sort(key=lambda b: (b["y"], b["x"]))
+        right_column.sort(key=lambda b: (b["y"], b["x"]))
+        
+        # Combine: left column first, then right column
+        return left_column + right_column
+    else:
+        # Single column: sort by y, then x (original behavior)
+        blocks.sort(key=lambda b: (b["y"], b["x"]))
+        return blocks
 
 
 def classify_block_type(roi: np.ndarray, text: str) -> str:

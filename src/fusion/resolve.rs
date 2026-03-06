@@ -10,7 +10,33 @@ pub fn resolve_blocks(alignment: &AlignmentResult, page_class: PageClass) -> Vec
         blocks.push(resolve_pair(pair, page_class));
     }
 
+    // Count OCR blocks to detect multi-column layouts
+    let ocr_block_count = alignment.unmatched_b.len();
+    
     for block in &alignment.unmatched_a {
+        // Skip oversized parser blocks when there are many OCR blocks (likely multi-column)
+        // Check if this is a full-page parser block (common in PDF text extraction)
+        let bbox = block.bbox();
+        let is_full_page = bbox.x0.abs() < 10.0 && bbox.y0.abs() < 10.0 
+            && (bbox.x1 - 1000.0).abs() < 10.0 && (bbox.y1 - 1400.0).abs() < 10.0;
+        
+        if is_full_page && ocr_block_count >= 10 {
+            // Skip this full-page parser block in favor of OCR blocks
+            eprintln!("[DEBUG] Skipping full-page parser block ({} OCR blocks)", ocr_block_count);
+            continue;
+        }
+        
+        // Also check area-based criterion
+        let block_area = bbox.width() * bbox.height();
+        let page_area = 1000.0 * 1400.0;
+        let is_oversized = block_area / page_area > 0.7;
+        
+        if is_oversized && ocr_block_count >= 10 {
+            eprintln!("[DEBUG] Skipping oversized parser block (area={:.1}%, {} OCR blocks)", 
+                     block_area / page_area * 100.0, ocr_block_count);
+            continue;
+        }
+        
         blocks.push(promote_single(
             block.clone(),
             Provenance::Parser,
@@ -127,6 +153,26 @@ fn resolve_pair(pair: &MatchedPair, page_class: PageClass) -> Block {
     let geometry_good = pair.iou > 0.3 || pair.center_distance < 50.0;
     let a_text = pair.a.text_content();
     let b_text = pair.b.text_content();
+
+    // Check if parser block is oversized (full-page or nearly full-page)
+    // If so, prefer OCR blocks which have better layout information
+    let parser_bbox = pair.a.bbox();
+    let parser_area = parser_bbox.width() * parser_bbox.height();
+    let page_area = 1000.0 * 1400.0;
+    let parser_is_oversized = parser_area / page_area > 0.7;
+    
+    // If parser block is oversized and similarity is low, prefer OCR
+    if parser_is_oversized {
+        let sim = match (&a_text, &b_text) {
+            (Some(a), Some(b)) => text_similarity(a, b),
+            _ => 0.0,
+        };
+        if sim < 0.15 {
+            // Very low similarity + oversized parser = prefer OCR for better layout
+            eprintln!("[DEBUG] Oversized parser block with low similarity ({:.3}), preferring OCR", sim);
+            return promote_single(pair.b.clone(), Provenance::Ocr, page_class);
+        }
+    }
 
     let similarity = match (&a_text, &b_text) {
         (Some(a), Some(b)) => Some(text_similarity(a, b)),
@@ -505,6 +551,17 @@ fn parser_reliable_for_accuracy(blocks: &[Block]) -> bool {
         .max()
         .unwrap_or(i32::MIN);
 
+    let ocr_text_blocks = blocks
+        .iter()
+        .filter(|block| matches!(
+            block,
+            Block::TextBlock {
+                source: Provenance::Ocr,
+                ..
+            }
+        ))
+        .count();
+    
     let ocr_chars = blocks
         .iter()
         .filter_map(|block| match block {
@@ -515,6 +572,13 @@ fn parser_reliable_for_accuracy(blocks: &[Block]) -> bool {
             _ => None,
         })
         .sum::<usize>();
+
+    // If parser has only 1 large block but OCR has many small blocks (10+),
+    // it's likely a multi-column layout where parser's reading order is wrong.
+    // Prefer OCR in this case.
+    if parser_text_blocks == 1 && ocr_text_blocks >= 10 {
+        return false;
+    }
 
     parser_chars >= 220
         && parser_text_blocks >= 1

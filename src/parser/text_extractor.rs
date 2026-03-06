@@ -203,6 +203,7 @@ pub fn extract_glyph_runs(pdf_path: &Path, page_idx: usize) -> Vec<GlyphRun> {
 
     // For now, approximate the page as a fixed-size box; this matches the
     // default dimensions used elsewhere in the parser pipeline.
+    // Multi-column layout is handled by OCR's column detection.
     let bbox = BBox::new(0.0, 0.0, 1000.0, 1400.0);
 
     vec![GlyphRun { text, bbox }]
