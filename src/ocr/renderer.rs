@@ -48,17 +48,26 @@ impl PageRenderer {
             anyhow::bail!("pdftoppm failed with status: {status}");
         }
 
-        // pdftoppm will create a file like `<prefix>-1.png` for this page
-        let image_path = self
-            .out_dir
-            .join(format!("page_{:03}-{}.png", page_number, page_number));
-
-        if !image_path.exists() {
-            anyhow::bail!(
-                "expected rendered image not found: {}",
-                image_path.display()
-            );
-        }
+        // pdftoppm naming varies by version (`-1`, `-01`, etc.). Find the
+        // rendered output by prefix rather than assuming one suffix pattern.
+        let page_prefix = format!("page_{:03}-", page_number);
+        let image_path = fs::read_dir(&self.out_dir)?
+            .filter_map(Result::ok)
+            .map(|entry| entry.path())
+            .filter(|path| path.is_file())
+            .find(|path| {
+                path.file_name()
+                    .and_then(|name| name.to_str())
+                    .map(|name| name.starts_with(&page_prefix) && name.ends_with(".png"))
+                    .unwrap_or(false)
+            })
+            .ok_or_else(|| {
+                anyhow::anyhow!(
+                    "expected rendered image not found for prefix {} in {}",
+                    page_prefix,
+                    self.out_dir.display()
+                )
+            })?;
 
         // We could inspect the image to get exact dimensions in the future.
         // For now, approximate using the default layout used elsewhere.
