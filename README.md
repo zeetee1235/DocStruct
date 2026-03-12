@@ -551,7 +551,14 @@ output_dir/
 | `output` | `PathBuf` | Path to the output directory |
 | `dpi` | `u32` | Rendering DPI passed to `pdftoppm` and the OCR bridge |
 
-Environment overrides for the OCR bridge path are respected at runtime (see `src/ocr/bridge.rs`).
+Environment overrides for the OCR bridge runtime:
+
+| Variable | Default | Description |
+|---|---|---|
+| `DOCSTRUCT_BRIDGE` | `ocr/bridge/ocr_bridge.py` | Override OCR bridge script path |
+| `DOCSTRUCT_PYTHON` | `python3` | Python executable used to run the OCR bridge |
+| `DOCSTRUCT_OCR_WORKERS` | `min(cpu_count, 8)` | Number of parallel OCR workers for per-block Tesseract calls |
+| `DOCSTRUCT_OCR_USE_CUDA` | `0` | If `1`, attempts OpenCV CUDA acceleration for grayscale/threshold preprocessing |
 
 ---
 

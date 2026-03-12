@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 import argparse
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor
 import json
+import os
 import re
 import sys
 import unicodedata
@@ -15,6 +17,54 @@ from pytesseract import Output
 
 # Lazy import for pix2tex to avoid slow startup when not needed
 _latex_model = None
+
+
+def _resolve_ocr_workers() -> int:
+    """Resolve OCR worker count from env (default: physical CPU-friendly)."""
+    raw = os.environ.get("DOCSTRUCT_OCR_WORKERS", "")
+    if raw:
+        try:
+            return max(1, int(raw))
+        except ValueError:
+            pass
+    cpu_count = os.cpu_count() or 1
+    return max(1, min(cpu_count, 8))
+
+
+def _cuda_enabled() -> bool:
+    return os.environ.get("DOCSTRUCT_OCR_USE_CUDA", "0") == "1"
+
+
+def _to_grayscale(img: np.ndarray) -> np.ndarray:
+    if len(img.shape) == 2:
+        return img
+
+    if _cuda_enabled() and hasattr(cv2, "cuda"):
+        try:
+            gpu = cv2.cuda_GpuMat()
+            gpu.upload(img)
+            gray_gpu = cv2.cuda.cvtColor(gpu, cv2.COLOR_BGR2GRAY)
+            return gray_gpu.download()
+        except Exception:
+            pass
+
+    return cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+
+def _otsu_threshold(gray: np.ndarray) -> np.ndarray:
+    if _cuda_enabled() and hasattr(cv2, "cuda"):
+        try:
+            gpu = cv2.cuda_GpuMat()
+            gpu.upload(gray)
+            # Otsu is not available in cv2.cuda; use a fixed threshold from Otsu estimate.
+            otsu_val, _ = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+            thresh_gpu = cv2.cuda.threshold(gpu, otsu_val, 255, cv2.THRESH_BINARY)[1]
+            return thresh_gpu.download()
+        except Exception:
+            pass
+
+    _, roi_bin = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    return roi_bin
 
 
 def combine_hangul_jamos(text: str) -> str:
@@ -277,7 +327,7 @@ def detect_blocks(image_path: Path, min_area: int = 2000, merge_kernel: tuple = 
                      Reduced from (25,15) to (15,10) to avoid over-merging equations
     """
     img = cv2.imread(str(image_path))
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    gray = _to_grayscale(img)
     thresh = cv2.adaptiveThreshold(
         gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 35, 15
     )
@@ -521,21 +571,21 @@ def run_ocr(image_path: Path, lang: str = "eng") -> list[dict]:
     
     results = []
     latex_model = None
-    
-    for block in blocks:
+
+    def process_block(block: dict) -> dict | None:
         x, y, w, h = block["x"], block["y"], block["w"], block["h"]
         roi = img[y:y+h, x:x+w]
 
         if roi.size == 0:
-            continue
+            return None
 
         # Multi-pass OCR for higher recall/precision:
         # - original ROI
         # - grayscale ROI
         # - Otsu-thresholded ROI
         # with both PSM 6 (block) and PSM 11 (sparse text).
-        roi_gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY) if len(roi.shape) == 3 else roi
-        _, roi_bin = cv2.threshold(roi_gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        roi_gray = _to_grayscale(roi)
+        roi_bin = _otsu_threshold(roi_gray)
         variants = [roi, roi_gray, roi_bin]
         psm_modes = [6, 11]
         best_text = ""
@@ -553,15 +603,43 @@ def run_ocr(image_path: Path, lang: str = "eng") -> list[dict]:
         text = normalize_ocr_text(best_text)
         block_type = classify_block_type(roi, text)
 
-        result = {
+        return {
             "text": text,
             "bbox": [float(x), float(y), float(x + w), float(y + h)],
             "block_type": block_type,
             "confidence": max(0.05, min(1.0, best_conf / 100.0)),
         }
-        
+
+    worker_count = _resolve_ocr_workers()
+    indexed_blocks = list(enumerate(blocks))
+    ordered_results: list[tuple[int, dict]] = []
+
+    if worker_count <= 1 or len(indexed_blocks) <= 1:
+        for idx, block in indexed_blocks:
+            result = process_block(block)
+            if result is not None:
+                ordered_results.append((idx, result))
+    else:
+        def process_indexed(pair: tuple[int, dict]) -> tuple[int, dict | None]:
+            idx, block = pair
+            return idx, process_block(block)
+
+        with ThreadPoolExecutor(max_workers=worker_count) as pool:
+            for idx, result in pool.map(process_indexed, indexed_blocks):
+                if result is not None:
+                    ordered_results.append((idx, result))
+
+    ordered_results.sort(key=lambda item: item[0])
+
+    for _, result in ordered_results:
         # For math blocks, try LaTeX OCR
-        if block_type == "math":
+        if result["block_type"] == "math":
+            x0, y0, x1, y1 = (int(v) for v in result["bbox"])
+            roi = img[y0:y1, x0:x1]
+            if roi.size == 0:
+                results.append(result)
+                continue
+
             if latex_model is None:
                 latex_model = get_latex_model()
             
@@ -577,7 +655,7 @@ def run_ocr(image_path: Path, lang: str = "eng") -> list[dict]:
                     result["latex"] = ""
             else:
                 result["latex"] = ""
-        
+
         results.append(result)
     
     return results
