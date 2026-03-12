@@ -34,7 +34,10 @@ pub struct OcrBridge {
 
 impl OcrBridge {
     pub fn new(work_dir: PathBuf) -> Self {
-        let script_path = PathBuf::from("ocr/bridge/ocr_bridge.py");
+        // Allow override via env var; fall back to path relative to cwd
+        let script_path = env::var("DOCSTRUCT_BRIDGE")
+            .map(PathBuf::from)
+            .unwrap_or_else(|_| PathBuf::from("ocr/bridge/ocr_bridge.py"));
         Self {
             work_dir,
             script_path,
